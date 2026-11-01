@@ -18,6 +18,8 @@ internal static class Theme
             Application.Current.Resources[key]=GlassDesign.Solid(value);
         foreach(var (key,alpha) in new[]{("GlassControl",GlassDesign.ControlAlpha),("GlassControlHover",GlassDesign.HoverAlpha),("GlassEdge",GlassDesign.EdgeAlpha),("GlassEdgeStrong",GlassDesign.StrongEdgeAlpha),("GlassInset",GlassDesign.InsetAlpha),("GlassTrack",GlassDesign.TrackAlpha),("GlassCard",GlassDesign.CardAlpha),("GlassSelected",GlassDesign.SelectionAlpha)})
             Application.Current.Resources[key]=new SolidColorBrush(Color.FromArgb(alpha,255,255,255));
+        Application.Current.Resources["SliderTrack"]=new SolidColorBrush(Color.FromArgb(GlassDesign.SliderTrackAlpha,255,255,255));
+        Application.Current.Resources["SliderFill"]=Brushes.White;Application.Current.Resources["SliderThumb"]=Brushes.White;
         Application.Current.Resources[SystemColors.HighlightBrushKey]=GlassDesign.Solid("#454545");
         Application.Current.Resources[SystemColors.HighlightTextBrushKey]=GlassDesign.Solid(GlassDesign.Ink);
         foreach(Window window in Application.Current.Windows)ApplyTitleBar(window);

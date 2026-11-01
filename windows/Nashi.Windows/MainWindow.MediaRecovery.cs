@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using Windows.Media.Control;
 
@@ -75,8 +76,8 @@ public sealed partial class MainWindow
             if(islandMediaEmpty is not null)islandMediaEmpty.Visibility=Visibility.Collapsed;
             foreach(var control in new[]{islandMediaPrevious,islandMediaNext,islandMediaPlaybackToggle,islandNowMediaToggle,islandCompactMediaToggle})if(control is not null)control.IsEnabled=true;
             try{UpdateIslandMediaTimeline(session);}catch(Exception){DisableIslandMediaSeeking();}
-            foreach(var control in new[]{islandNowMediaToggle,islandMediaPlaybackToggle,islandCompactMediaToggle})if(control is not null){control.Content=islandMediaPlaying?"⏸":"⏯";control.ToolTip=IslandText(islandMediaPlaying?"Pause media":"Play media",islandMediaPlaying?"Medyayı duraklat":"Medyayı sürdür");}
-            RenderIslandDashboard();UpdateIslandHint();
+            foreach(var control in new[]{islandNowMediaToggle,islandMediaPlaybackToggle,islandCompactMediaToggle})if(control is not null){if(control.Content is TextBlock icon){var glyph=islandMediaPlaying?"\uE769":"\uE768";if(icon.Text!=glyph)icon.Text=glyph;}control.ToolTip=IslandText(islandMediaPlaying?"Pause media":"Play media",islandMediaPlaying?"Medyayı duraklat":"Medyayı sürdür");}
+            RenderIslandMedia();UpdateIslandHint();
         }
         catch(Exception)
         {
@@ -100,6 +101,6 @@ public sealed partial class MainWindow
         if(islandCompactMediaTitle is not null)islandCompactMediaTitle.Text=L10n.Text("No active media session.");
         foreach(var control in new[]{islandMediaPrevious,islandMediaNext,islandMediaPlaybackToggle,islandNowMediaToggle,islandCompactMediaToggle})if(control is not null)control.IsEnabled=false;
         DisableIslandMediaSeeking();if(islandMediaPosition is not null)islandMediaPosition.Text="00:00";if(islandMediaDuration is not null)islandMediaDuration.Text="00:00";
-        RenderIslandDashboard();UpdateIslandHint();
+        RenderIslandMedia();UpdateIslandHint();
     }
 }

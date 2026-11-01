@@ -12,6 +12,8 @@ internal static class GlassDesign
     internal const string Ink = "#F6F6F6", Muted = "#A3A3A3", Line = "#3A3A3A";
     internal const byte ControlAlpha = 24, HoverAlpha = 38, EdgeAlpha = 42, StrongEdgeAlpha = 77;
     internal const byte InsetAlpha = 18, TrackAlpha = 72, CardAlpha = 22, SelectionAlpha = 46;
+    internal const byte SliderTrackAlpha = 54, RangeSelectionAlpha = 56;
+    internal const double SliderHoverRailScale = 1.25, SliderHoverThumbScale = 1.15, SliderPressedThumbScale = .9, SliderMotionMs = 120;
     internal const double Radius = 15, NavRadius = 17, SelectionOpacity = .18;
     internal const double DisabledOpacity = .30, InactiveOpacity = .58, PressScale = .96;
     internal const double NavMotionMs = 330, PageMotionMs = 300, PageOffset = 18, PressMotionMs = 100, ReleaseMotionMs = 240, StaggerMs = 35, CardFadeMs = 180;

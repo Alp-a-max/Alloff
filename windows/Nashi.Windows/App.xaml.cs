@@ -1,11 +1,33 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 namespace Nashi.Windows;
 public partial class App:Application
 {
+    private void GlassSliderEnter(object sender,MouseEventArgs e)=>AnimateGlassSlider(sender,true,false);
+    private void GlassSliderLeave(object sender,MouseEventArgs e)=>AnimateGlassSlider(sender,false,sender is Slider s&&s.IsMouseCaptureWithin&&Mouse.LeftButton==MouseButtonState.Pressed);
+    private void GlassSliderDown(object sender,MouseButtonEventArgs e)=>AnimateGlassSlider(sender,true,true);
+    private void GlassSliderUp(object sender,MouseButtonEventArgs e)=>AnimateGlassSlider(sender,sender is Slider s&&s.IsMouseOver,false);
+    private void GlassSliderLostCapture(object sender,MouseEventArgs e)=>AnimateGlassSlider(sender,sender is Slider s&&s.IsMouseOver,false);
+    internal static void AnimateGlassSlider(object sender,bool hovered,bool pressed)
+    {
+        if(sender is not Slider slider||slider.Template is null)return;
+        var rail=slider.Template.FindName("Rail",slider) as FrameworkElement;var track=slider.Template.FindName("PART_Track",slider) as Track;
+        var fill=track?.DecreaseRepeatButton?.Template?.FindName("Fill",track.DecreaseRepeatButton) as FrameworkElement;
+        var dot=track?.Thumb?.Template?.FindName("Dot",track.Thumb) as FrameworkElement;
+        var railScale=hovered?GlassDesign.SliderHoverRailScale:1;AnimateScale(rail,1,railScale);AnimateScale(fill,1,railScale);
+        var thumbScale=pressed?GlassDesign.SliderPressedThumbScale:hovered?GlassDesign.SliderHoverThumbScale:1;AnimateScale(dot,thumbScale,thumbScale);
+    }
+    private static void AnimateScale(FrameworkElement? element,double x,double y)
+    {
+        if(element?.RenderTransform is not ScaleTransform scale)return;if(scale.IsFrozen){scale=scale.Clone();element.RenderTransform=scale;}var oldX=scale.ScaleX;var oldY=scale.ScaleY;
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty,null);scale.BeginAnimation(ScaleTransform.ScaleYProperty,null);scale.ScaleX=x;scale.ScaleY=y;
+        if(!GlassDesign.MotionEnabled)return;var duration=new Duration(TimeSpan.FromMilliseconds(GlassDesign.SliderMotionMs));
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty,new DoubleAnimation(oldX,x,duration){EasingFunction=GlassDesign.Easing});scale.BeginAnimation(ScaleTransform.ScaleYProperty,new DoubleAnimation(oldY,y,duration){EasingFunction=GlassDesign.Easing});
+    }
     private void GlassButtonDown(object sender,MouseButtonEventArgs e)=>AnimateGlassButton(sender,GlassDesign.PressScale,GlassDesign.PressMotionMs);
     private void GlassButtonUp(object sender,MouseButtonEventArgs e)=>AnimateGlassButton(sender,1,GlassDesign.ReleaseMotionMs);
     private void GlassButtonCaptureLost(object sender,MouseEventArgs e)=>AnimateGlassButton(sender,1,GlassDesign.ReleaseMotionMs);

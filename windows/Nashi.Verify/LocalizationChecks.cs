@@ -30,6 +30,9 @@ internal static class LocalizationChecks
         check(migratedPill.Value.PillModeEnabled&&migratedPill.Value.PillVisibilityMode=="shortcut"&&migratedPill.RecoveryNotice is null,"Legacy automatic pill preferences did not migrate to shortcut toggle mode");
         var dockOrder=new[]{"media","now","tools","download","history","search","settings"};store.Save(store.Value with{PillVisibilityMode="smart",PillDockOrder=dockOrder});var customDock=new PreferencesStore(directory).Value;
         check(customDock.PillVisibilityMode=="smart"&&customDock.PillDockOrder.SequenceEqual(dockOrder),"Smart visibility or custom pill module order did not persist");
+        store.Save(customDock with{PillVisibilityMode="peek",PillPosition="right",PillMonitorMode="specific",PillMonitorId="display-2",PillHoverDelayMs=180,PillCollapseDelayMs=450,PillSpringStiffness=350});
+        var notch=new PreferencesStore(directory).Value;check(notch.PillVisibilityMode=="peek"&&notch.PillPosition=="right"&&notch.PillMonitorId=="display-2"&&notch.PillHoverDelayMs==180&&notch.PillCollapseDelayMs==450&&notch.PillSpringStiffness==350,"Pill configuration did not round-trip");
+        var revision=store.Revision;var snapshot=store.ReadSnapshot();store.Save(store.Value with{PillHoverDelayMs=200});check(!store.ApplySnapshot(snapshot,revision)&&store.Value.PillHoverDelayMs==200,"An old external settings read overwrote a newer save");
         try{store.Save(customDock with{PillDockOrder=["media","now","tools","download","history","search","search"]});check(false,"Duplicate pill modules were accepted");}catch(ArgumentException){check(true,"Invalid pill module order was rejected");}
         check(AppLocalization.Normalize("fr")=="en"&&AppLocalization.Text("Home","en")=="Home","Unsupported language or English fallback failed");
     }

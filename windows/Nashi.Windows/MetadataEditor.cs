@@ -6,6 +6,7 @@ public sealed class MetadataEditor:Window
 {
     private readonly CheckBox removeAll=new(){Content="Remove all metadata",Margin=new(4,14,4,14)};
     private readonly Dictionary<string,TextBox> fields=[];private readonly Dictionary<string,string> original=[];
+    internal CheckBox UIAuditRemoveAll=>removeAll;
     public bool RemoveAll=>removeAll.IsChecked==true;public Dictionary<string,string> Updates=>fields.Where(p=>p.Value.Text!=original.GetValueOrDefault(p.Key,"")).ToDictionary(p=>p.Key,p=>p.Value.Text);
     public MetadataEditor(Window owner,IReadOnlyDictionary<string,string> metadata,bool media=false)
     {

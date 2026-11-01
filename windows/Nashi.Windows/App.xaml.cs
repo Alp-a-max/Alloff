@@ -1,9 +1,48 @@
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 namespace Nashi.Windows;
 public partial class App:Application
 {
+    private void GlassSliderEnter(object sender,MouseEventArgs e)=>AnimateGlassSlider(sender,true,false);
+    private void GlassSliderLeave(object sender,MouseEventArgs e)=>AnimateGlassSlider(sender,false,sender is Slider s&&s.IsMouseCaptureWithin&&Mouse.LeftButton==MouseButtonState.Pressed);
+    private void GlassSliderDown(object sender,MouseButtonEventArgs e)=>AnimateGlassSlider(sender,true,true);
+    private void GlassSliderUp(object sender,MouseButtonEventArgs e)=>AnimateGlassSlider(sender,sender is Slider s&&s.IsMouseOver,false);
+    private void GlassSliderLostCapture(object sender,MouseEventArgs e)=>AnimateGlassSlider(sender,sender is Slider s&&s.IsMouseOver,false);
+    internal static void AnimateGlassSlider(object sender,bool hovered,bool pressed)
+    {
+        if(sender is not Slider slider||slider.Template is null)return;
+        var rail=slider.Template.FindName("Rail",slider) as FrameworkElement;var track=slider.Template.FindName("PART_Track",slider) as Track;
+        var fill=track?.DecreaseRepeatButton?.Template?.FindName("Fill",track.DecreaseRepeatButton) as FrameworkElement;
+        var dot=track?.Thumb?.Template?.FindName("Dot",track.Thumb) as FrameworkElement;
+        var railScale=hovered?GlassDesign.SliderHoverRailScale:1;AnimateScale(rail,1,railScale);AnimateScale(fill,1,railScale);
+        var thumbScale=pressed?GlassDesign.SliderPressedThumbScale:hovered?GlassDesign.SliderHoverThumbScale:1;AnimateScale(dot,thumbScale,thumbScale);
+    }
+    private static void AnimateScale(FrameworkElement? element,double x,double y)
+    {
+        if(element?.RenderTransform is not ScaleTransform scale)return;if(scale.IsFrozen){scale=scale.Clone();element.RenderTransform=scale;}var oldX=scale.ScaleX;var oldY=scale.ScaleY;
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty,null);scale.BeginAnimation(ScaleTransform.ScaleYProperty,null);scale.ScaleX=x;scale.ScaleY=y;
+        if(!GlassDesign.MotionEnabled)return;var duration=new Duration(TimeSpan.FromMilliseconds(GlassDesign.SliderMotionMs));
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty,new DoubleAnimation(oldX,x,duration){EasingFunction=GlassDesign.Easing});scale.BeginAnimation(ScaleTransform.ScaleYProperty,new DoubleAnimation(oldY,y,duration){EasingFunction=GlassDesign.Easing});
+    }
+    private void GlassButtonDown(object sender,MouseButtonEventArgs e)=>AnimateGlassButton(sender,GlassDesign.PressScale,GlassDesign.PressMotionMs);
+    private void GlassButtonUp(object sender,MouseButtonEventArgs e)=>AnimateGlassButton(sender,1,GlassDesign.ReleaseMotionMs);
+    private void GlassButtonCaptureLost(object sender,MouseEventArgs e)=>AnimateGlassButton(sender,1,GlassDesign.ReleaseMotionMs);
+    private static void AnimateGlassButton(object sender,double target,double milliseconds)
+    {
+        if(sender is not Button button||button.Template is null)return;
+        var root=button.Template.FindName("Chrome",button) as FrameworkElement??button.Template.FindName("Hover",button) as FrameworkElement;
+        if(root is null)return;root.RenderTransformOrigin=new Point(.5,.5);if(root.RenderTransform is not ScaleTransform scale){scale=new ScaleTransform(1,1);root.RenderTransform=scale;}
+        var fromX=scale.ScaleX;var fromY=scale.ScaleY;scale.BeginAnimation(ScaleTransform.ScaleXProperty,null);scale.BeginAnimation(ScaleTransform.ScaleYProperty,null);scale.ScaleX=scale.ScaleY=target;
+        if(!GlassDesign.MotionEnabled)return;var duration=new Duration(TimeSpan.FromMilliseconds(milliseconds));var easing=target==1?new BackEase{EasingMode=EasingMode.EaseOut,Amplitude=.12}:null;
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty,new DoubleAnimation(fromX,target,duration){EasingFunction=easing});scale.BeginAnimation(ScaleTransform.ScaleYProperty,new DoubleAnimation(fromY,target,duration){EasingFunction=easing});
+    }
     private SingleInstance? instance;
     internal static bool IsSmokeTest{get;private set;}
+    internal static bool IsPillModeSmoke{get;private set;}
     private WindowManagement? windowManagement;
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -15,6 +54,34 @@ public partial class App:Application
         }
         DispatcherUnhandledException+=(_,error)=>{var folder=Environment.GetEnvironmentVariable("NASHI_SMOKE_DIRECTORY");if(folder is not null){Directory.CreateDirectory(folder);File.WriteAllText(Path.Combine(folder,"dispatcher-error.txt"),error.Exception.ToString());error.Handled=true;Shutdown(1);}};
         base.OnStartup(e);
+#if DEBUG
+        if(e.Args.Contains("--tool-export-audit"))
+        {
+            IsSmokeTest=true;ShutdownMode=ShutdownMode.OnExplicitShutdown;
+            try{Shutdown(ToolExportChecks.Run(e.Args[Array.IndexOf(e.Args,"--tool-export-audit")+1]));}catch(Exception error){Console.Error.WriteLine(error);Shutdown(1);}return;
+        }
+        if(e.Args.Contains("--tool-buttons-smoke"))
+        {
+            IsSmokeTest=true;ShutdownMode=ShutdownMode.OnExplicitShutdown;
+            var index=Array.IndexOf(e.Args,"--tool-buttons-smoke");var output=index+1<e.Args.Length?e.Args[index+1]:Path.Combine(Path.GetTempPath(),"Nashi-Tool-Buttons-Smoke");
+            try{Shutdown(ToolButtonsSmokeChecks.Run(output));}catch(Exception error){Console.Error.WriteLine(error);Shutdown(1);}return;
+        }
+        if(e.Args.Contains("--pill-mode-smoke"))
+        {
+            IsSmokeTest=true;IsPillModeSmoke=true;ShutdownMode=ShutdownMode.OnExplicitShutdown;
+            var index=Array.IndexOf(e.Args,"--pill-mode-smoke");var output=index+1<e.Args.Length?e.Args[index+1]:Path.Combine(Path.GetTempPath(),"Nashi-Pill-Smoke");
+            try{var code=PillModeSmokeChecks.Run(output);Shutdown(code);}catch(Exception error){Console.Error.WriteLine(error);Shutdown(1);}return;
+        }
+#endif
+#if DEBUG
+        if(e.Args.Contains("--pill-style-gallery"))
+        {
+            ShutdownMode=ShutdownMode.OnMainWindowClose;
+            var gallery=new PillStyleGallery();MainWindow=gallery;
+            var galleryIndex=Array.IndexOf(e.Args,"--pill-style-gallery");var capture=galleryIndex+1<e.Args.Length?e.Args[galleryIndex+1]:Environment.GetEnvironmentVariable("NASHI_PILL_GALLERY_OUTPUT");if(!string.IsNullOrWhiteSpace(capture))gallery.Loaded+=(_,_)=>gallery.Dispatcher.BeginInvoke(new Action(()=>gallery.Capture(capture)),System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            gallery.Show();return;
+        }
+#endif
         if(e.Args.Contains("--smoke-test-interactions"))
         {
             IsSmokeTest=true;ShutdownMode=ShutdownMode.OnExplicitShutdown;
@@ -40,6 +107,23 @@ public partial class App:Application
             }
             catch(Exception error){failures.Add(error.ToString());}
             if(Interlocked.CompareExchange(ref finished,1,0)==0){Report(failures);Shutdown(failures.Count==0?0:1);}return;
+        }
+        if(e.Args.Contains("--pill-native-probe"))
+        {
+            IsSmokeTest=true;ShutdownMode=ShutdownMode.OnExplicitShutdown;
+            try{var index=Array.IndexOf(e.Args,"--pill-native-probe");if(index+1>=e.Args.Length)throw new ArgumentException("Probe output directory is required.");Shutdown(PillNativeChecks.Run(e.Args[index+1]));}catch(Exception error){Console.Error.WriteLine(error);Shutdown(1);}return;
+        }
+        if(e.Args.Contains("--island-interaction-smoke"))
+        {
+            IsSmokeTest=true;ShutdownMode=ShutdownMode.OnExplicitShutdown;
+            try
+            {
+                var checks=0;
+                IslandInteractionChecks.Run((passed,message)=>{if(!passed)throw new InvalidOperationException(message);checks++;});
+                Console.WriteLine($"Island interaction checks: {checks} passed.");Shutdown(0);
+            }
+            catch(Exception error){Console.Error.WriteLine(error);Shutdown(1);}
+            return;
         }
         if(e.Args.Contains("--ui-audit"))
         {

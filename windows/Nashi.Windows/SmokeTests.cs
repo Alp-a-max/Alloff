@@ -28,6 +28,7 @@ internal static class SmokeTests
         TrayIconRecoveryChecks.Run(Check);
         EditorReliabilityChecks.Run(root,Check);
         InteractionChecks.Run(root,Check);
+        IslandInteractionChecks.Run(Check);
         var visual=new DrawingVisual();using(var dc=visual.RenderOpen()){dc.DrawRectangle(Brushes.DarkOliveGreen,null,new Rect(0,0,320,180));dc.DrawRectangle(Brushes.Gold,null,new Rect(20,20,120,80));}
         var bitmap=new RenderTargetBitmap(320,180,96,96,PixelFormats.Pbgra32);bitmap.Render(visual);var source=Path.Combine(root,"Source.png");ImageEngine.Save(bitmap,source,"png");
         const string query="/tEXt/{str=Comment}";
@@ -120,7 +121,7 @@ internal static class SmokeTests
         DesktopInput.Key(audioEditor,Key.I);DesktopInput.Key(audioEditor,Key.Right);DesktopInput.Key(audioEditor,Key.O);Check(audioEditor.Timeline.End>audioEditor.Timeline.Start&&audioEditor.Timeline.End<5,"I/O did not synchronize trim range");
         audioEditor.FieldForTest("Start").Focus();position=audioEditor.PreviewSeconds;DesktopInput.Key(audioEditor,Key.Left);Check(Math.Abs(audioEditor.PreviewSeconds-position)<.1,"Arrow in trim text field incorrectly sought media");DesktopInput.Key(audioEditor,Key.Escape);Check(!audioEditor.IsVisible,"Escape did not close trim editor");
         var themeSettings=new SettingsWindow(window,new PreferencesStore(library.DirectoryPath),()=>{},()=>Task.CompletedTask,library);themeSettings.Show();DesktopInput.Pump();
-        var appearance=Descendants(themeSettings).OfType<ComboBox>().Single(c=>c.Items.Contains("dark"));appearance.Focus();DesktopInput.Key(themeSettings,Key.Home);DesktopInput.Key(themeSettings,Key.Down);Check(!Theme.Dark&&library.Appearance=="light","Settings appearance keyboard selection did not apply and persist light theme");window.UpdateLayout();Capture(window,"windows-home-light.png");DesktopInput.Key(themeSettings,Key.End);Check(Theme.Dark&&library.Appearance=="dark","Dark theme selection failed");themeSettings.Close();
+        Theme.Apply("light");Check(Theme.Dark&&Theme.Brush("Gold") is SolidColorBrush monochrome&&monochrome.Color.R==monochrome.Color.G&&monochrome.Color.G==monochrome.Color.B,"Monochrome appearance must remain dark and neutral with light system preference");Theme.Apply("dark");Check(Theme.Dark,"Monochrome dark theme was not applied");themeSettings.Close();
         if(Environment.GetEnvironmentVariable("GITHUB_ACTIONS")=="true")checks+=ParitySmokeTests.Run(root,window,source,bitmap,testTools);
         DesktopParityChecks.Run(root,window,source,importedText,importedImage,testTools,Check);
         PdfPreviewChecks.Run(root,Check);

@@ -18,6 +18,8 @@ internal static class IslandInteractionChecks
             "The island collapsed while its media popover was being used.");
         check(!MainWindow.ShouldCollapseIsland(false, false, false, false, editorFocused: true),
             "The island collapsed while a text editor inside it still had keyboard focus.");
+        check(MainWindow.ShouldExpandOnHover("smart")&&!MainWindow.ShouldExpandOnHover("shortcut")&&!MainWindow.ShouldExpandOnHover("always"),
+            "Only the optional Smart visibility mode should expand the pill on hover.");
         var collapsed=PillGeometry.Create(PillGeometry.CollapsedWidth,PillGeometry.CollapsedHeight);
         var expanded=PillGeometry.Create(PillGeometry.ExpandedWidth,PillGeometry.ExpandedHeight);
         check(Math.Abs(collapsed.Bounds.Width-PillGeometry.CollapsedWidth)<.01&&Math.Abs(collapsed.Bounds.Height-PillGeometry.CollapsedHeight)<.01,

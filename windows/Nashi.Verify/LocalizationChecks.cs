@@ -28,6 +28,9 @@ internal static class LocalizationChecks
         check(legacy.Value.Language=="en"&&!legacy.Value.Feedback,"Legacy preference migration changed other values");
         var automaticPill=Path.Combine(root,"Legacy automatic pill preferences");Directory.CreateDirectory(automaticPill);File.WriteAllText(Path.Combine(automaticPill,"preferences.json"),"{\"PillModeEnabled\":true,\"PillVisibilityMode\":\"automatic\",\"PillHotEdgeEnabled\":true}");var migratedPill=new PreferencesStore(automaticPill);
         check(migratedPill.Value.PillModeEnabled&&migratedPill.Value.PillVisibilityMode=="shortcut"&&migratedPill.RecoveryNotice is null,"Legacy automatic pill preferences did not migrate to shortcut toggle mode");
+        var dockOrder=new[]{"media","now","tools","download","history","search","settings"};store.Save(store.Value with{PillVisibilityMode="smart",PillDockOrder=dockOrder});var customDock=new PreferencesStore(directory).Value;
+        check(customDock.PillVisibilityMode=="smart"&&customDock.PillDockOrder.SequenceEqual(dockOrder),"Smart visibility or custom pill module order did not persist");
+        try{store.Save(customDock with{PillDockOrder=["media","now","tools","download","history","search","search"]});check(false,"Duplicate pill modules were accepted");}catch(ArgumentException){check(true,"Invalid pill module order was rejected");}
         check(AppLocalization.Normalize("fr")=="en"&&AppLocalization.Text("Home","en")=="Home","Unsupported language or English fallback failed");
     }
 }

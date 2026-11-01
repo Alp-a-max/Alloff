@@ -17,10 +17,10 @@ public sealed partial class MainWindow
         surface.MouseEnter += (_, _) =>
         {
             islandCollapseTimer?.Stop();
-            if (!islandExpanded && preferences.Value.PillVisibilityMode != "shortcut") SetIslandExpanded(true);
+            if (!islandExpanded && ShouldExpandOnHover(preferences.Value.PillVisibilityMode)) SetIslandExpanded(true);
         };
-        surface.MouseLeave += (_, _) => { if(preferences.Value.PillVisibilityMode!="shortcut")ScheduleIslandCollapse(); };
-        surface.LostKeyboardFocus += (_, _) => { if(preferences.Value.PillVisibilityMode!="shortcut")ScheduleIslandCollapse(); };
+        surface.MouseLeave += (_, _) => { if(preferences.Value.PillVisibilityMode=="smart")ScheduleIslandCollapse(); };
+        surface.LostKeyboardFocus += (_, _) => { if(preferences.Value.PillVisibilityMode=="smart")ScheduleIslandCollapse(); };
         surface.DragEnter += (_, e) =>
         {
             if (busy || !SupportsIslandDrop(e.Data)) return;
@@ -74,4 +74,5 @@ public sealed partial class MainWindow
     internal static bool ShouldCollapseIsland(bool pointerOverSurface, bool dragging,
         bool actionPopupHovered, bool mediaPopupHovered, bool editorFocused = false) =>
         !pointerOverSurface && !dragging && !actionPopupHovered && !mediaPopupHovered && !editorFocused;
+    internal static bool ShouldExpandOnHover(string mode)=>mode=="smart";
 }

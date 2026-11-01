@@ -186,6 +186,7 @@ internal static class UIAudit
                 var expanded = capture.Scene != "island.collapsed" && capture.Scene != "island.actions-popup";
                 var tab = capture.Scene.StartsWith("island.expanded.",StringComparison.Ordinal) ? capture.Scene["island.expanded.".Length..] : "actions";
                 owner.UIAuditPresentIsland(expanded, tab);
+                if (capture.Scene == "island.expanded.media") owner.UIAuditUseSyntheticMedia();
                 if (capture.Scene == "island.actions-popup") owner.UIAuditShowActionsPopup();
             }
             subject = capture.Scene switch

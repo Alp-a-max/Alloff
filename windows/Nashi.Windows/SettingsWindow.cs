@@ -40,6 +40,25 @@ public sealed partial class SettingsWindow:Window
         picker.SelectedItem=picker.Items.OfType<ComboBoxItem>().First(item=>(string)item.Tag==selected);
         picker.SelectionChanged+=(_,_)=>{if(picker.SelectedItem is ComboBoxItem item&&item.Tag is string value)save(value);};page.Children.Add(picker);
     }
+    private void DockOrderSetting()
+    {
+        page.Children.Add(L10n.Label(new TextBlock{Text=PillText("Module order","Modül sırası"),Margin=new Thickness(4,16,4,4),FontWeight=FontWeights.SemiBold}));
+        var rows=new StackPanel{Margin=new Thickness(4,2,4,8)};
+        string Label(string key)=>key switch{"now"=>PillText("Files","Dosyalar"),"tools"=>PillText("Tools","Araçlar"),"download"=>PillText("Download","İndir"),"media"=>PillText("Media","Medya"),"history"=>PillText("History","Geçmiş"),"search"=>PillText("Search","Ara"),_=>PillText("Settings","Ayarlar")};
+        void Render()
+        {
+            rows.Children.Clear();var order=store.Value.PillDockOrder;
+            for(var index=0;index<order.Length;index++)
+            {
+                var current=index;var row=new DockPanel{Margin=new Thickness(2,2,2,2)};var move=new StackPanel{Orientation=Orientation.Horizontal};var up=MainWindow.Button("↑",()=>Move(current,-1));up.Width=32;up.Height=30;up.Padding=new Thickness(0);up.Margin=new Thickness(2);up.IsEnabled=current>0;up.ToolTip=PillText("Move up","Yukarı taşı");var down=MainWindow.Button("↓",()=>Move(current,1));down.Width=32;down.Height=30;down.Padding=new Thickness(0);down.Margin=new Thickness(2);down.IsEnabled=current<order.Length-1;down.ToolTip=PillText("Move down","Aşağı taşı");move.Children.Add(up);move.Children.Add(down);DockPanel.SetDock(move,Dock.Right);row.Children.Add(move);var label=new TextBlock{Text=Label(order[current]),VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(10,0,4,0)};row.Children.Add(label);var surface=new Border{Child=row,CornerRadius=new CornerRadius(12),Padding=new Thickness(5),Margin=new Thickness(0,1,0,1),BorderThickness=new Thickness(1)};surface.SetResourceReference(Border.BackgroundProperty,"GlassCard");surface.SetResourceReference(Border.BorderBrushProperty,"GlassEdge");rows.Children.Add(surface);
+            }
+        }
+        void Move(int index,int delta)
+        {
+            var order=store.Value.PillDockOrder.ToList();var target=index+delta;if(target<0||target>=order.Count)return;(order[index],order[target])=(order[target],order[index]);Save(store.Value with{PillDockOrder=order.ToArray()});Render();
+        }
+        Render();page.Children.Add(rows);
+    }
     private void ShowSection(Func<Task> update)
     {
         page.Children.Clear();switch(sections.SelectedItem as string)
@@ -57,7 +76,7 @@ public sealed partial class SettingsWindow:Window
                 page.Children.Add(MainWindow.Button("Choose output folder…",()=>{var picker=new OpenFolderDialog{Title="Save new copies here"};if(picker.ShowDialog(this)==true){Save(store.Value with{OutputFolder=picker.FolderName,OutputMode="folder"});ShowSection(update);}}));page.Children.Add(L10n.Label(new TextBlock{Text=store.Value.OutputFolder,TextWrapping=TextWrapping.Wrap}));
                 page.Children.Add(MainWindow.Button("Choose downloads folder…",()=>{var picker=new OpenFolderDialog{Title="Save downloaded media here"};if(picker.ShowDialog(this)==true){Save(store.Value with{DownloadFolder=picker.FolderName});ShowSection(update);}}));page.Children.Add(L10n.Label(new TextBlock{Text=store.Value.DownloadFolder,TextWrapping=TextWrapping.Wrap}));Toggle("Reveal finished files in Explorer",store.Value.RevealFinished,v=>Save(store.Value with{RevealFinished=v}));break;
             case "Behavior":
-                Heading("How Nashi behaves.","Tune startup, visibility and small quality-of-life details.");PillModeToggle();AddChoice("When Nashi opens",new[]{("shortcut",PillText("Start hidden · use shortcut","Gizli başlat · kısayolla aç")),("expanded",PillText("Open the pill expanded","Hap genişletilmiş açılsın"))},store.Value.PillStartupBehavior,v=>Save(store.Value with{PillStartupBehavior=v}));AddChoice("Pill visibility",new[]{("shortcut",PillText("Shortcut toggle","Kısayolla aç / kapat")),("always",PillText("Always visible","Her zaman görünür"))},store.Value.PillVisibilityMode,v=>Save(store.Value with{PillVisibilityMode=v}));
+                Heading("How Nashi behaves.","Tune startup, visibility and small quality-of-life details.");PillModeToggle();AddChoice("When Nashi opens",new[]{("shortcut",PillText("Start hidden · use shortcut","Gizli başlat · kısayolla aç")),("expanded",PillText("Open the pill expanded","Hap genişletilmiş açılsın"))},store.Value.PillStartupBehavior,v=>Save(store.Value with{PillStartupBehavior=v}));AddChoice("Pill visibility",new[]{("shortcut",PillText("Shortcut toggle","K\u0131sayolla a\u00e7 / kapat")),("always",PillText("Always visible","Her zaman g\u00f6r\u00fcn\u00fcr")),("smart",PillText("Reveal on hover","\u00dczerine gelince a\u00e7"))},store.Value.PillVisibilityMode,v=>Save(store.Value with{PillVisibilityMode=v}));DockOrderSetting();
                 Toggle("Enable Nashi drag shortcuts",store.Value.Enabled,v=>Save(store.Value with{Enabled=v}));if(appearanceStore is not null)Toggle("Window management · drag a title bar, then Shift or Alt",appearanceStore.WindowManagementEnabled,v=>{appearanceStore.SetWindowManagement(v);changed();});Toggle("Sound feedback",store.Value.Feedback,v=>Save(store.Value with{Feedback=v}));page.Children.Add(MainWindow.Button("Try feedback",Feedback.Play));Toggle("Subtle animations",store.Value.Animations,v=>Save(store.Value with{Animations=v}));Toggle("Keep running in the system tray",store.Value.KeepInTray,v=>Save(store.Value with{KeepInTray=v}));Pick("Wheel finish",["glass","solid"],store.Value.WheelFinish,v=>Save(store.Value with{WheelFinish=v}));var wheelSize=new Slider{Minimum=.85,Maximum=1.4,Value=store.Value.WheelScale,Margin=new(4,12,4,8),ToolTip="Wheel size"};wheelSize.ValueChanged+=(_,_)=>Save(store.Value with{WheelScale=wheelSize.Value});page.Children.Add(L10n.Label(new TextBlock{Text="Wheel size"}));page.Children.Add(wheelSize);Pick("Float behavior",["createNew","addToExisting"],store.Value.FloatBehavior,v=>Save(store.Value with{FloatBehavior=v}));
                 using(var key=Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run")){var enabled=key?.GetValue("Nashi") is string;Toggle("Launch at login",enabled,v=>{try{using var run=Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");if(v)run.SetValue("Nashi","\""+Environment.ProcessPath+"\" --background");else run.DeleteValue("Nashi",false);}catch(Exception error){MessageBox.Show(this,L10n.Text(error.Message),L10n.Text("Launch at login"));}});}break;
             case "Formats":FormatDefaults();break;

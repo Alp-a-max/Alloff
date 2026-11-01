@@ -108,6 +108,11 @@ public partial class App:Application
             catch(Exception error){failures.Add(error.ToString());}
             if(Interlocked.CompareExchange(ref finished,1,0)==0){Report(failures);Shutdown(failures.Count==0?0:1);}return;
         }
+        if(e.Args.Contains("--pill-native-probe"))
+        {
+            IsSmokeTest=true;ShutdownMode=ShutdownMode.OnExplicitShutdown;
+            try{var index=Array.IndexOf(e.Args,"--pill-native-probe");if(index+1>=e.Args.Length)throw new ArgumentException("Probe output directory is required.");Shutdown(PillNativeChecks.Run(e.Args[index+1]));}catch(Exception error){Console.Error.WriteLine(error);Shutdown(1);}return;
+        }
         if(e.Args.Contains("--island-interaction-smoke"))
         {
             IsSmokeTest=true;ShutdownMode=ShutdownMode.OnExplicitShutdown;

@@ -35,15 +35,15 @@ public sealed partial class MainWindow
         islandMediaSourcePicker.Visibility=sources.Length>1?Visibility.Visible:Visibility.Collapsed;
     }
 
-    private Task RefreshIslandMedia()=>App.IsSmokeTest||islandMediaStopped?Task.CompletedTask:islandMediaRefreshQueue.RequestAsync(ReadIslandMedia);
+    private Task RefreshIslandMedia()=>App.IsSmokeTest||islandMediaStopped||islandHiddenByAutomation?Task.CompletedTask:islandMediaRefreshQueue.RequestAsync(ReadIslandMedia);
 
     private async Task ReadIslandMedia()
     {
-        if(islandMediaStopped)return;
+        if(islandMediaStopped||islandHiddenByAutomation)return;
         try
         {
             islandMediaManager??=await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
-            if(islandMediaStopped)return;
+            if(islandMediaStopped||islandHiddenByAutomation)return;
             if(!islandMediaEventsConnected)
             {
                 islandMediaManager.SessionsChanged+=OnIslandMediaSessionsChanged;
@@ -58,13 +58,14 @@ public sealed partial class MainWindow
                 return;
             }
             var info=await session.TryGetMediaPropertiesAsync();
-            if(islandMediaStopped)return;
+            if(islandMediaStopped||islandHiddenByAutomation)return;
             if(string.IsNullOrWhiteSpace(info.Title)&&islandCurrentMedia is not null&&DateTimeOffset.UtcNow-islandMediaLastSeen<TimeSpan.FromSeconds(3))return;
             var playback=session.GetPlaybackInfo();
             var artworkKey=session.SourceAppUserModelId+"\0"+info.AlbumTitle+"\0"+info.Title+"\0"+info.Artist;
             var artwork=islandCurrentArtwork;
             if(artworkKey!=islandMediaArtworkKey)artwork=info.Thumbnail is null?null:await ReadIslandMediaArtwork(info.Thumbnail);
-            if(islandMediaStopped)return;
+            if(islandMediaStopped||islandHiddenByAutomation)return;
+            var previousMedia=islandCurrentMedia;var wasPlaying=islandMediaPlaying;
             islandMediaLastSeen=DateTimeOffset.UtcNow;islandMediaReadFailures=0;
             islandMediaArtist=info.Artist;islandCurrentMedia=string.IsNullOrWhiteSpace(info.Title)?L10n.Text("Media is ready."):info.Title+(string.IsNullOrWhiteSpace(info.Artist)?"":" · "+info.Artist);
             islandMediaPlaying=playback.PlaybackStatus==GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
@@ -78,6 +79,7 @@ public sealed partial class MainWindow
             try{UpdateIslandMediaTimeline(session);}catch(Exception){DisableIslandMediaSeeking();}
             foreach(var control in new[]{islandNowMediaToggle,islandMediaPlaybackToggle,islandCompactMediaToggle})if(control is not null){if(control.Content is TextBlock icon){var glyph=islandMediaPlaying?"\uE769":"\uE768";if(icon.Text!=glyph)icon.Text=glyph;}control.ToolTip=IslandText(islandMediaPlaying?"Pause media":"Play media",islandMediaPlaying?"Medyayı duraklat":"Medyayı sürdür");}
             RenderIslandMedia();UpdateIslandHint();
+            if(!string.IsNullOrWhiteSpace(info.Title)&&(previousMedia!=islandCurrentMedia||!wasPlaying&&islandMediaPlaying))TriggerPillMediaPeek();
         }
         catch(Exception)
         {

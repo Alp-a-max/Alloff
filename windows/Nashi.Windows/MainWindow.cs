@@ -51,13 +51,13 @@ public sealed partial class MainWindow:Window
     private readonly Button homeButton,libraryButton,updateButton,toolsSetupButton;private readonly ComboBox appearance;
     private readonly StackPanel workArea=new();
     private readonly ScrollViewer homeScroll=new(),libraryScroll=new();
-    private Border? islandPanel,islandPill;private Button? islandAction;private Popup? islandActionPopup;private TextBlock? islandHint;private Grid? islandDashboard,islandNowView,islandShapeContent;private UIElement? mainWorkspace,islandCompactFace;private bool islandExpanded,pillModeEnabled,islandHiddenByAutomation;
-    private Border? islandNowMedia,islandNowDropArea;private ColumnDefinition? islandNowMediaColumn,islandNowGapColumn;private Image? islandNowArtwork;private TextBlock? islandNowTitle,islandNowArtist;private Slider? islandNowSeek;private WrapPanel? islandFilePreviews,islandFormatChips;private StackPanel? islandDropPrompt,pillEqualizer;private ProgressBar? islandTrayProgress;private Rectangle? islandDropOutline;private Ellipse? pillBusyIndicator;private bool? pillBusyAnimating,pillEqualizerAnimating;private bool islandTrayDragActive;private Border? islandOnboarding;private Button? islandSettingsButton;
+    private Border? islandPanel,islandPill,pillSpringSurface;private Button? islandAction;private Popup? islandActionPopup;private TextBlock? islandHint;private Grid? islandDashboard,islandNowView,islandShapeContent;private UIElement? mainWorkspace,islandCompactFace;private bool islandExpanded,pillModeEnabled,islandHiddenByAutomation;
+    private Border? islandNowMedia,islandNowDropArea;private ColumnDefinition? islandNowMediaColumn,islandNowGapColumn;private Image? islandNowArtwork,pillCompactArtwork;private TextBlock? islandNowTitle,islandNowArtist;private Slider? islandNowSeek;private WrapPanel? islandFilePreviews,islandFormatChips;private StackPanel? islandDropPrompt,pillEqualizer;private ProgressBar? islandTrayProgress;private Rectangle? islandDropOutline;private Ellipse? pillBusyIndicator;private bool? pillBusyAnimating;private bool islandTrayDragActive;private Border? islandOnboarding;private Button? islandSettingsButton;
     private readonly Dictionary<string,Button> islandDockButtons=[];private StackPanel? islandDock;private GlassNavBar? islandDockNav;private Button? islandSearchButton;
     private Button? islandLabelButton,islandNowMediaToggle,islandMediaPlaybackToggle,islandCompactMediaToggle;private Popup? islandMediaPopup;private TextBox? islandActionSearchField;private Slider? islandCompactMediaSeek;private Image? islandCompactPopupArtwork;private TextBlock? islandCompactMediaPosition,islandCompactMediaDuration,islandCompactMediaTitle;private bool islandCompactMediaSeeking;
     private Grid? islandWidgetHost;private readonly Dictionary<string,Button> islandTabButtons=[];private readonly Dictionary<string,string> islandBluetoothNames=[];private RichTextBox? islandNote;private TextBox? islandTodoEntry;private TextBlock? islandTimerLabel,islandMediaTitle,islandMediaArtistLabel,islandMediaEmpty,islandMediaPosition,islandMediaDuration,islandMirrorStatus;private Slider? islandMediaSeek;private Image? islandMediaArtwork,islandMirrorImage;private BitmapSource? islandCurrentArtwork;private Button? islandMirrorToggle,islandMediaPrevious,islandMediaNext;private MediaCapture? islandMirrorCapture;private System.Windows.Threading.DispatcherTimer? islandMirrorRefresh,islandBluetoothPoll;private bool islandMirrorFrameBusy,islandBluetoothInitialScan=true,islandBluetoothPollBusy,islandMediaPlaying,islandMediaSeekUserChanging;private string? islandCurrentMedia,islandMediaArtist,islandMediaArtworkKey,islandBluetoothActivity,islandCurrentWidgetTab;private DateTimeOffset islandBluetoothActivityUntil;private readonly string islandWidgetPath;private string islandNoteText="";private string? islandNoteRichText;private string? islandCalendarPath,islandCalendarUrl;private readonly ObservableCollection<string> islandTodos=[];private readonly ObservableCollection<string> islandCompletedTodos=[];private readonly HashSet<string> islandFavoriteTodos=new(StringComparer.Ordinal);private readonly ObservableCollection<string> islandTray=[];private readonly ObservableCollection<string> islandPocket=[];private TimeSpan islandTimerRemaining=TimeSpan.FromMinutes(25);private System.Windows.Threading.DispatcherTimer? islandTimer,islandCalendarRefresh,islandStatusTimer;private GlobalSystemMediaTransportControlsSessionManager? islandMediaManager;private GlobalSystemMediaTransportControlsSession? islandObservedMediaSession;private bool islandMediaEventsConnected,islandTimerRunning;private static readonly HttpClient islandCalendarHttp=new(){Timeout=TimeSpan.FromSeconds(20)};
     private TextBox? islandPrompterScript;private TextBlock? islandPrompterPreview,islandPrompterSpeedLabel;private ScrollViewer? islandPrompterScroll;private Button? islandPrompterToggle;private System.Windows.Threading.DispatcherTimer? islandPrompterTimer;private string islandPrompterText="";private double islandPrompterSpeed=34,islandPrompterOffset;private bool islandPrompterRunning;
-    private bool busy,checking,toolSetupOffered;private WindowsUpdate? update;private Border? updateBanner;private HwndSource? pillSource;private bool hotkeyRegistered;private bool? appliedPillMode;
+    private bool busy,checking,toolSetupOffered;private WindowsUpdate? update;private Border? updateBanner;private HwndSource? pillSource;private bool hotkeyRegistered;private string? registeredPillHotkey;private bool? appliedPillMode;
     private ToolSetupWindow? toolSetupWindow;
     private readonly bool monitorToolSetup;
     internal bool UpdateBannerVisible=>updateBanner?.Visibility==Visibility.Visible;
@@ -94,7 +94,7 @@ public sealed partial class MainWindow:Window
         if(islandNowTitle is not null)islandNowTitle.Text=islandCurrentMedia;if(islandNowArtist is not null)islandNowArtist.Text=islandMediaArtist;
         if(islandNowArtwork is not null)islandNowArtwork.Source=islandCurrentArtwork;if(islandMediaArtwork is not null)islandMediaArtwork.Source=islandCurrentArtwork;if(islandMediaTitle is not null)islandMediaTitle.Text=islandCurrentMedia;if(islandMediaArtistLabel is not null)islandMediaArtistLabel.Text=islandMediaArtist;if(islandMediaEmpty is not null)islandMediaEmpty.Visibility=Visibility.Collapsed;
         if(islandNowMediaToggle?.Content is TextBlock nowIcon)nowIcon.Text="\uE769";if(islandMediaPlaybackToggle?.Content is TextBlock mediaIcon)mediaIcon.Text="\uE769";
-        RenderIslandDashboard();
+        RenderIslandDashboard();UpdateIslandHint();
     }
     internal void UIAuditShowActionsPopup()=>ShowIslandActions();
     internal bool UIAuditClickAction(string title)
@@ -189,8 +189,9 @@ public sealed partial class MainWindow:Window
         islandPanel.Clip=PillGeometry.Create(PillGeometry.CollapsedWidth,PillGeometry.CollapsedHeight);
         islandPanel.SizeChanged+=(_,_)=>UpdatePillClip();
         islandShapeContent=new Grid();islandPanel.Child=islandShapeContent;
+        var springTransforms=new TransformGroup();springTransforms.Children.Add(new ScaleTransform(1,1));springTransforms.Children.Add(new TranslateTransform());pillSpringSurface=new Border{CornerRadius=new(18),BorderThickness=new(1),IsHitTestVisible=false,RenderTransformOrigin=new Point(.5,0),RenderTransform=springTransforms};pillSpringSurface.SetResourceReference(Border.BackgroundProperty,"GlassInset");pillSpringSurface.SetResourceReference(Border.BorderBrushProperty,"GlassEdge");islandShapeContent.Children.Add(pillSpringSurface);
         var face=new DockPanel{LastChildFill=true,Margin=new Thickness(10,0,10,0)};
-        var mark=new Image{Source=FileGarden.Artwork("NashiMark"),Width=18,Height=18,Stretch=System.Windows.Media.Stretch.Uniform,VerticalAlignment=VerticalAlignment.Center};
+        var mark=new Image{Source=FileGarden.Artwork("NashiMark"),Width=18,Height=18,Stretch=System.Windows.Media.Stretch.Uniform,VerticalAlignment=VerticalAlignment.Center};pillCompactArtwork=mark;
         AutomationProperties.SetName(mark,"Nashi");DockPanel.SetDock(mark,Dock.Left);face.Children.Add(mark);
         var activity=new Grid{HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Center,Width=82,Height=20};
         pillEqualizer=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Center,Visibility=Visibility.Collapsed};
@@ -210,12 +211,13 @@ public sealed partial class MainWindow:Window
             if(pillModeEnabled&&preferences.Value.PillVisibilityMode=="shortcut"&&!islandExpanded)HidePillWindow();
             if(!App.IsSmokeTest)
             {
-                islandStatusTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromSeconds(30)};islandStatusTimer.Tick+=(_,_)=>{UpdateIslandHint();RenderIslandMedia();};islandStatusTimer.Start();
-                StartIslandBluetoothMonitor();islandMediaRecoveryTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromSeconds(1)};islandMediaRecoveryTimer.Tick+=async(_,_)=>await RefreshIslandMedia();islandMediaRecoveryTimer.Start();_ = InitializeIslandMediaEvents();UpdateIslandHint();
+                Microsoft.Win32.SystemEvents.DisplaySettingsChanged+=OnPillDisplayChanged;ConfigurePillVisibility();
+                islandStatusTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromSeconds(30)};islandStatusTimer.Tick+=(_,_)=>{UpdateIslandHint();RenderIslandMedia();};
+                islandMediaRecoveryTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromSeconds(1)};islandMediaRecoveryTimer.Tick+=async(_,_)=>await RefreshIslandMedia();if(!islandHiddenByAutomation){ResumeVisiblePolling();_ = InitializeIslandMediaEvents();}UpdateIslandHint();
                 if(islandCalendarUrl is not null){islandCalendarRefresh=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMinutes(15)};islandCalendarRefresh.Tick+=async(_,_)=>await RefreshIslandCalendarSubscription();islandCalendarRefresh.Start();_ = RefreshIslandCalendarSubscription();}
             }
         };
-        Closed+=(_,_)=>{islandStatusTimer?.Stop();islandCalendarRefresh?.Stop();islandPrompterTimer?.Stop();UnregisterPillHotkey();islandMediaStopped=true;islandMediaRecoveryTimer?.Stop();StopIslandMediaEvents();};
+        Closed+=(_,_)=>{StopPillVisibility();islandStatusTimer?.Stop();islandCalendarRefresh?.Stop();islandPrompterTimer?.Stop();UnregisterPillHotkey();islandMediaStopped=true;islandMediaRecoveryTimer?.Stop();StopIslandMediaEvents();};
         var firstPillOpen=preferences.Value.PillModeEnabled&&!preferences.Value.PillOnboardingCompleted;
         var openAtStartup=preferences.Value.PillModeEnabled&&preferences.Value.PillStartupBehavior=="expanded";
         SwitchPillMode(preferences.Value.PillModeEnabled,initialExpanded:hasInitialFiles||firstPillOpen||openAtStartup);
@@ -225,7 +227,7 @@ public sealed partial class MainWindow:Window
     {
         if(islandPanel is null||mainWorkspace is null)return;
         initialExpanded|=enabled&&(!preferences.Value.PillOnboardingCompleted||preferences.Value.PillStartupBehavior=="expanded");
-        pillModeEnabled=enabled;appliedPillMode=enabled;WindowStyle=enabled?WindowStyle.None:WindowStyle.SingleBorderWindow;if(AllowsTransparency!=enabled)AllowsTransparency=enabled;Background=enabled?Brushes.Transparent:Theme.Brush("Paper");ResizeMode=enabled?ResizeMode.NoResize:ResizeMode.CanResize;Topmost=enabled;ShowInTaskbar=!enabled;
+        pillModeEnabled=enabled;appliedPillMode=enabled;WindowStyle=enabled?WindowStyle.None:WindowStyle.SingleBorderWindow;if(AllowsTransparency!=enabled)AllowsTransparency=enabled;Background=enabled?Brushes.Transparent:Theme.Brush("Paper");ResizeMode=enabled?ResizeMode.NoResize:ResizeMode.CanResize;Topmost=enabled;ShowInTaskbar=!enabled;ShowActivated=!enabled;
         if(enabled)
         {
             Content=null;Content=islandPanel;islandPanel.Visibility=Visibility.Visible;Width=(initialExpanded?PillGeometry.ExpandedWidth:PillGeometry.CollapsedWidth)*preferences.Value.PillScale;Height=(initialExpanded?PillGeometry.ExpandedHeight:PillGeometry.CollapsedHeight)*preferences.Value.PillScale;islandPanel.Width=Width;islandPanel.Height=Height;
@@ -248,14 +250,14 @@ public sealed partial class MainWindow:Window
     {
         if(appliedPillMode!=preferences.Value.PillModeEnabled){SwitchPillMode(preferences.Value.PillModeEnabled);return;}
         if(!pillModeEnabled)return;
-        UnregisterPillHotkey();InitializePillHotkey();
+        if(hotkeyRegistered&&registeredPillHotkey==preferences.Value.PillHotkey)return;UnregisterPillHotkey();InitializePillHotkey();
     }
     private void InitializePillHotkey()
     {
         if(!pillModeEnabled||App.IsSmokeTest&&!App.IsPillModeSmoke||!PillGeometry.TryParseHotkey(preferences.Value.PillHotkey,out var modifiers,out var key))return;
         var handle=new WindowInteropHelper(this).Handle;if(handle==IntPtr.Zero)return;
         if(pillSource is null){pillSource=HwndSource.FromHwnd(handle);pillSource?.AddHook(PillHotkeyHook);}
-        if(!hotkeyRegistered)hotkeyRegistered=RegisterHotKey(handle,0x4E53,modifiers,key);
+        if(!hotkeyRegistered){hotkeyRegistered=RegisterHotKey(handle,0x4E53,modifiers,key);registeredPillHotkey=hotkeyRegistered?preferences.Value.PillHotkey:null;}
         if(!hotkeyRegistered&&islandHint is not null)islandHint.Text=IslandText("Shortcut unavailable","Kısayol kullanılamıyor");
     }
     private IntPtr PillHotkeyHook(IntPtr hwnd,int message,IntPtr wParam,IntPtr lParam,ref bool handled)
@@ -265,17 +267,18 @@ public sealed partial class MainWindow:Window
     private void TogglePillFromShortcut()
     {
         if(!pillModeEnabled)return;
-        if(!IsVisible||islandHiddenByAutomation){islandHiddenByAutomation=false;Show();SetNoActivate(false);Activate();SetIslandExpanded(true);islandStatusTimer?.Start();islandBluetoothPoll?.Start();_ = RefreshIslandMedia();}
+        if(!IsVisible||islandHiddenByAutomation){islandHiddenByAutomation=false;pillAutoHidden=false;Show();SetNoActivate(false);Activate();SetIslandExpanded(true);ResumeVisiblePolling();SyncPillSatellites();UpdatePillObserverRegions();_ = RefreshIslandMedia();}
         else{SetIslandExpanded(false,false);HidePillWindow();}
     }
     private void HidePillWindow()
     {
-        if(!pillModeEnabled)return;CancelIslandHover();CancelIslandCollapse();islandHiddenByAutomation=true;Hide();StopHiddenPolling();
+        if(!pillModeEnabled)return;CancelIslandHover();CancelIslandCollapse();islandHiddenByAutomation=true;pillAutoHidden=false;Hide();StopHiddenPolling();SyncPillSatellites();UpdatePillObserverRegions();
     }
-    private void StopHiddenPolling(){islandStatusTimer?.Stop();islandBluetoothPoll?.Stop();}
+    private void StopHiddenPolling(){islandStatusTimer?.Stop();islandBluetoothPoll?.Stop();if(islandHiddenByAutomation){islandMediaRecoveryTimer?.Stop();StopIslandMediaEvents();}else if(islandMediaRecoveryTimer is not null)islandMediaRecoveryTimer.Interval=TimeSpan.FromSeconds(5);}
+    private void ResumeVisiblePolling(){if(App.IsSmokeTest)return;islandStatusTimer?.Start();if(islandBluetoothPoll is null)StartIslandBluetoothMonitor();else islandBluetoothPoll.Start();if(islandMediaRecoveryTimer is not null){islandMediaRecoveryTimer.Interval=TimeSpan.FromSeconds(1);islandMediaRecoveryTimer.Start();}}
     private void UnregisterPillHotkey()
     {
-        if(hotkeyRegistered){var handle=new WindowInteropHelper(this).Handle;if(handle!=IntPtr.Zero)UnregisterHotKey(handle,0x4E53);hotkeyRegistered=false;}
+        if(hotkeyRegistered){var handle=new WindowInteropHelper(this).Handle;if(handle!=IntPtr.Zero)UnregisterHotKey(handle,0x4E53);hotkeyRegistered=false;}registeredPillHotkey=null;
         if(pillSource is not null){pillSource.RemoveHook(PillHotkeyHook);pillSource=null;}
     }
     private void SetNoActivate(bool value)
@@ -306,7 +309,7 @@ public sealed partial class MainWindow:Window
         islandFilePreviews=new WrapPanel{HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,Visibility=Visibility.Collapsed};trayContent.Children.Add(islandFilePreviews);var lower=new StackPanel{VerticalAlignment=VerticalAlignment.Bottom};islandFormatChips=new WrapPanel{HorizontalAlignment=HorizontalAlignment.Center,Visibility=Visibility.Collapsed};lower.Children.Add(islandFormatChips);islandTrayProgress=new ProgressBar{Height=3,Margin=new(0,7,0,0),IsIndeterminate=true,Visibility=Visibility.Collapsed,Foreground=IslandColor("#D2B36B"),Background=IslandColor("#292620")};lower.Children.Add(islandTrayProgress);Grid.SetRow(lower,1);trayContent.Children.Add(lower);
         islandDropOutline=new Rectangle{RadiusX=16,RadiusY=16,Stroke=IslandColor("#45454B"),StrokeThickness=1,StrokeDashArray=new DoubleCollection{4,3},IsHitTestVisible=false};var trayGrid=new Grid();trayGrid.Children.Add(trayContent);trayGrid.Children.Add(islandDropOutline);islandNowDropArea=new Border{CornerRadius=new(16),Background=Brushes.Transparent,Child=trayGrid,AllowDrop=true};islandNowDropArea.DragEnter+=(_,e)=>{if(SupportsIslandDrop(e.Data)){islandTrayDragActive=true;UpdateIslandDropVisual();e.Effects=DragDropEffects.Copy;e.Handled=true;}};islandNowDropArea.DragOver+=(_,e)=>{if(SupportsIslandDrop(e.Data)){islandTrayDragActive=true;UpdateIslandDropVisual();e.Effects=DragDropEffects.Copy;e.Handled=true;}};islandNowDropArea.DragLeave+=(_,_)=>{islandTrayDragActive=false;UpdateIslandDropVisual();};islandNowDropArea.Drop+=(_,e)=>{islandTrayDragActive=false;UpdateIslandDropVisual();if(!busy){Import(e.Data);ShowIslandWidgetTab("now");}e.Handled=true;};Grid.SetColumn(islandNowDropArea,2);islandNowView.Children.Add(islandNowDropArea);Grid.SetRow(islandNowView,1);page.Children.Add(islandNowView);
         islandWidgetHost=new Grid{Visibility=Visibility.Collapsed};var widgetScroll=new ScrollViewer{Content=islandWidgetHost,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,Margin=new(1,0,1,9)};Grid.SetRow(widgetScroll,1);page.Children.Add(widgetScroll);
-        var dockNav=new GlassNavBar{VerticalAlignment=VerticalAlignment.Center};islandDockNav=dockNav;var dock=dockNav.Items;islandDock=dock;
+        var dockNav=new GlassNavBar{VerticalAlignment=VerticalAlignment.Center};dockNav.MouseWheel+=(_,e)=>{if(e.Delta==0)return;ShowIslandWidgetTab(PillModeNavigation.Next(preferences.Value.PillDockOrder,islandCurrentWidgetTab,e.Delta<0?1:-1));SetIslandExpanded(true,false,activate:false);e.Handled=true;};islandDockNav=dockNav;var dock=dockNav.Items;islandDock=dock;
         foreach(var (key,glyph,label) in new[]{("now","\u25A4","Files"),("tools","\u2726","Tools"),("download","\u2193","Download"),("media","\u266B","Media"),("history","\u25F7","History"),("search","\u2315","Search"),("settings","\u2699","Settings")})islandDockButtons[key]=MakeIslandDockButton(key,glyph,label);
         islandSearchButton=islandDockButtons["search"];islandAction=islandSearchButton;islandSearchButton.ToolTip=L10n.Text("Search tools and modules");islandSettingsButton=islandDockButtons["settings"];ReorderIslandDock();Grid.SetRow(dockNav,2);page.Children.Add(dockNav);
         ShowIslandWidgetTab("now");RenderIslandDashboard();
@@ -329,7 +332,7 @@ public sealed partial class MainWindow:Window
     {
         if(islandWidgetHost is null)return;
         var previousTab=islandCurrentWidgetTab;var keys=preferences.Value.PillDockOrder;var oldIndex=Array.IndexOf(keys,previousTab=="actions"?"tools":previousTab);var newIndex=Array.IndexOf(keys,tab=="actions"?"tools":tab);
-        islandCurrentWidgetTab=tab;var showNow=tab=="now";if(islandNowView is not null)islandNowView.Visibility=showNow?Visibility.Visible:Visibility.Collapsed;islandWidgetHost.Visibility=showNow?Visibility.Collapsed:Visibility.Visible;islandWidgetHost.Children.Clear();
+        islandCurrentWidgetTab=tab;if(tab!="media")islandMediaVisualizer=null;RefreshPillAudioMeter();var showNow=tab=="now";if(islandNowView is not null)islandNowView.Visibility=showNow?Visibility.Visible:Visibility.Collapsed;islandWidgetHost.Visibility=showNow?Visibility.Collapsed:Visibility.Visible;islandWidgetHost.Children.Clear();
         Button? activeDock=null;foreach(var (key,button) in islandDockButtons){var selected=key==tab||key=="tools"&&tab=="actions";if(selected)activeDock=button;if(button.Content is StackPanel dockContent){if(App.IsSmokeTest)dockContent.Opacity=selected?1:GlassDesign.InactiveOpacity;else GlassDesign.FadeTo(dockContent,selected?1:GlassDesign.InactiveOpacity);foreach(var child in dockContent.Children.OfType<TextBlock>())child.SetResourceReference(TextBlock.ForegroundProperty,"Ink");}}
         islandDockNav?.Select(activeDock,!App.IsSmokeTest);if(!App.IsSmokeTest&&previousTab is not null&&oldIndex>=0&&newIndex>=0&&oldIndex!=newIndex)GlassPageTransition.Enter(showNow?islandNowView!:islandWidgetHost,newIndex>oldIndex?1:-1);
         foreach(var (key,button) in islandTabButtons){var selected=key==tab;button.Background=selected?Theme.Brush("GlassSelected"):Theme.Brush("GlassControl");button.Foreground=Theme.Brush("Ink");button.BorderBrush=selected?Theme.Brush("GlassEdgeStrong"):Theme.Brush("GlassEdge");button.BorderThickness=new(1);}if(showNow){if(tab!="mirror")_ = StopIslandMirror();RenderIslandDashboard();return;}if(tab!="media"){islandMediaSeek=null;islandMediaPosition=null;islandMediaDuration=null;islandMediaSeekUserChanging=false;}if(tab!="mirror")_ = StopIslandMirror();
@@ -375,7 +378,7 @@ public sealed partial class MainWindow:Window
         {
             var panel=new StackPanel{HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,MaxWidth=440};var nowPlaying=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Center,Margin=new(0,0,0,7)};var artworkGrid=new Grid{Width=64,Height=64};artworkGrid.Children.Add(new TextBlock{Text="♫",FontSize=26,Foreground=Theme.Brush("Muted"),HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center});islandMediaArtwork=new Image{Source=islandCurrentArtwork,Stretch=System.Windows.Media.Stretch.UniformToFill,Clip=new RectangleGeometry(new Rect(0,0,64,64),12,12)};artworkGrid.Children.Add(islandMediaArtwork);nowPlaying.Children.Add(artworkGrid);var mediaDetails=new StackPanel{VerticalAlignment=VerticalAlignment.Center,Margin=new(12,0,0,0),Width=310};islandMediaTitle=Text("No active media session.",14);islandMediaTitle.FontWeight=FontWeights.SemiBold;islandMediaTitle.TextTrimming=TextTrimming.CharacterEllipsis;islandMediaArtistLabel=Text("",12,"Muted");islandMediaArtistLabel.TextTrimming=TextTrimming.CharacterEllipsis;mediaDetails.Children.Add(islandMediaTitle);mediaDetails.Children.Add(islandMediaArtistLabel);islandMediaEmpty=Text(IslandText("Start a track in a media app to see it here.","Görmek için bir medya uygulamasında parça başlat."),12,"Muted");islandMediaEmpty.Margin=new(0,5,0,0);mediaDetails.Children.Add(islandMediaEmpty);nowPlaying.Children.Add(mediaDetails);panel.Children.Add(nowPlaying);islandMediaSourcePicker=new ComboBox{Margin=new(0,0,0,8),MinWidth=220,Visibility=Visibility.Collapsed};AutomationProperties.SetName(islandMediaSourcePicker,IslandText("Media source","Medya kaynağı"));islandMediaSourcePicker.SelectionChanged+=async(_,_)=>{if(islandUpdatingMediaSources)return;islandPreferredMediaSource=(islandMediaSourcePicker.SelectedItem as MediaSourceOption)?.Id;await RefreshIslandMedia();};panel.Children.Add(islandMediaSourcePicker);
             islandMediaSeek=new Slider{Minimum=0,Maximum=1,IsEnabled=false,IsMoveToPointEnabled=true,Width=376,Height=22,Margin=new(0,0,0,0)};islandMediaSeek.SetResourceReference(FrameworkElement.StyleProperty,"GlassSlider");islandMediaSeek.ValueChanged+=(_,_)=>{if(islandMediaPosition is not null)islandMediaPosition.Text=FormatIslandMediaTime(TimeSpan.FromSeconds(islandMediaSeek.Value));};islandMediaSeek.PreviewMouseLeftButtonDown+=(_,_)=>islandMediaSeekUserChanging=true;islandMediaSeek.PreviewMouseLeftButtonUp+=async(_,_)=>{if(islandMediaSeekUserChanging){islandMediaSeekUserChanging=false;await SeekIslandMedia(islandMediaSeek.Value);}};islandMediaSeek.KeyUp+=async(_,e)=>{if(e.Key is Key.Left or Key.Right)await SeekIslandMedia(islandMediaSeek.Value);};panel.Children.Add(islandMediaSeek);
-            var controls=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Center,Margin=new(0,3,0,0)};islandMediaPrevious=IslandMediaButton("\uE892","Previous track","previous");controls.Children.Add(islandMediaPrevious);islandMediaPlaybackToggle=IslandMediaButton(islandMediaPlaying?"\uE769":"\uE768","Play or pause media","toggle",primary:true);islandMediaPlaybackToggle.IsEnabled=!string.IsNullOrWhiteSpace(islandCurrentMedia);controls.Children.Add(islandMediaPlaybackToggle);islandMediaNext=IslandMediaButton("\uE893","Next track","next");islandMediaNext.IsEnabled=!string.IsNullOrWhiteSpace(islandCurrentMedia);controls.Children.Add(islandMediaNext);panel.Children.Add(controls);islandWidgetHost.Children.Add(panel);if(!App.IsSmokeTest)_ = RefreshIslandMedia();return;
+            var controls=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Center,Margin=new(0,3,0,0)};islandMediaPrevious=IslandMediaButton("\uE892","Previous track","previous");controls.Children.Add(islandMediaPrevious);islandMediaPlaybackToggle=IslandMediaButton(islandMediaPlaying?"\uE769":"\uE768","Play or pause media","toggle",primary:true);islandMediaPlaybackToggle.IsEnabled=!string.IsNullOrWhiteSpace(islandCurrentMedia);controls.Children.Add(islandMediaPlaybackToggle);islandMediaNext=IslandMediaButton("\uE893","Next track","next");islandMediaNext.IsEnabled=!string.IsNullOrWhiteSpace(islandCurrentMedia);controls.Children.Add(islandMediaNext);panel.Children.Add(controls);islandMediaVisualizer=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Center,Height=14,Margin=new(0,4,0,0),Visibility=islandMediaPlaying?Visibility.Visible:Visibility.Collapsed};foreach(var height in new[]{6d,12d,8d})islandMediaVisualizer.Children.Add(new Rectangle{Width=3,Height=height,RadiusX=1.5,RadiusY=1.5,Fill=Brushes.White,Margin=new(2,0,2,0),VerticalAlignment=VerticalAlignment.Bottom});AutomationProperties.SetName(islandMediaVisualizer,IslandText("Audio level","Ses seviyesi"));panel.Children.Add(islandMediaVisualizer);islandWidgetHost.Children.Add(panel);if(!App.IsSmokeTest)_ = RefreshIslandMedia();return;
         }
         if(tab=="prompter")
         {
@@ -492,8 +495,9 @@ public sealed partial class MainWindow:Window
     {
         try
         {
+            if(islandHiddenByAutomation)return;
             islandMediaManager??=await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
-            if(islandMediaStopped)return;
+            if(islandMediaStopped||islandHiddenByAutomation)return;
             if(!islandMediaEventsConnected)
             {
                 islandMediaManager.SessionsChanged+=OnIslandMediaSessionsChanged;
@@ -730,20 +734,20 @@ public sealed partial class MainWindow:Window
         foreach(var item in menu.Items.OfType<MenuItem>()){item.SetResourceReference(Control.BackgroundProperty,"Surface");item.SetResourceReference(Control.ForegroundProperty,"Ink");item.Padding=new(12,8,12,8);item.SnapsToDevicePixels=true;foreach(var child in item.Items.OfType<MenuItem>()){child.SetResourceReference(Control.BackgroundProperty,"Surface");child.SetResourceReference(Control.ForegroundProperty,"Ink");child.Padding=new(12,8,12,8);}}
         foreach(var separator in menu.Items.OfType<Separator>()){separator.SetResourceReference(Control.BackgroundProperty,"Line");separator.Height=1;separator.Margin=new(6,5,6,5);}
     }
-    private void SetIslandExpanded(bool expanded,bool animate=true)
+    private void SetIslandExpanded(bool expanded,bool animate=true,bool activate=true)
     {
         if(!pillModeEnabled||!ReferenceEquals(Content,islandPanel)||islandPanel is null||islandPill is null)return;
-        var changed=islandExpanded!=expanded;var useMotion=changed&&animate&&IsVisible&&preferences.Value.Animations&&SystemParameters.ClientAreaAnimation;
+        var oldWidth=ActualWidth>0?ActualWidth:Width;var oldHeight=ActualHeight>0?ActualHeight:Height;var changed=islandExpanded!=expanded;var useMotion=changed&&animate&&IsVisible&&preferences.Value.Animations&&SystemParameters.ClientAreaAnimation;
         var ticket=changed?islandVisibility.Start(expanded,useMotion):0;
         if(changed){CancelIslandHover();CancelIslandCollapse();islandActionPopup?.SetCurrentValue(Popup.IsOpenProperty,false);islandMediaPopup?.SetCurrentValue(Popup.IsOpenProperty,false);}
         islandExpanded=expanded;
         if(islandCompactFace is not null)islandCompactFace.Visibility=expanded?Visibility.Collapsed:Visibility.Visible;
         if(islandDashboard is not null)islandDashboard.Visibility=expanded?Visibility.Visible:Visibility.Collapsed;
         if(islandLabelButton is not null)islandLabelButton.Visibility=expanded?Visibility.Collapsed:Visibility.Visible;
-        var scale=preferences.Value.PillScale;var targetWidth=expanded?Math.Min(PillGeometry.ExpandedWidth*scale,Math.Max(180,SystemParameters.PrimaryScreenWidth-24)):PillGeometry.CollapsedWidth*scale;
+        var scale=preferences.Value.PillScale;var screen=TargetPillDisplay();var screenWidth=screen is null?SystemParameters.PrimaryScreenWidth:screen.Width*96d/screen.Dpi;var screenHeight=screen is null?SystemParameters.WorkArea.Height:(screen.Bottom-screen.Top)*96d/screen.Dpi;var targetWidth=expanded?Math.Min(PillGeometry.ExpandedWidth*scale,Math.Max(180,screenWidth-24)):PillGeometry.CollapsedWidth*scale;
         var baseHeight=islandCurrentWidgetTab switch{"actions" or "history" or "download"=>440,"notes" or "todo" or "pocket" or "calendar" or "prompter" or "tray"=>360,"media" or "mirror"=>320,_=>PillGeometry.ExpandedHeight};
         var desiredHeight=(baseHeight+(islandOnboarding?.Visibility==Visibility.Visible?50:0))*scale;
-        var targetHeight=expanded?Math.Min(desiredHeight,Math.Max(160,SystemParameters.WorkArea.Height*.65)):PillGeometry.CollapsedHeight*scale;
+        var targetHeight=expanded?Math.Min(desiredHeight,Math.Max(160,screenHeight*.65)):PillGeometry.CollapsedHeight*scale;
         // Resize once per state change: animating window dimensions repeatedly triggers layout,
         // clip regeneration and window repositioning on every frame of a layered WPF window.
         BeginAnimation(WidthProperty,null);BeginAnimation(HeightProperty,null);islandPanel.BeginAnimation(WidthProperty,null);islandPanel.BeginAnimation(HeightProperty,null);
@@ -751,10 +755,11 @@ public sealed partial class MainWindow:Window
         if(changed)
         {
             islandPanel.BeginAnimation(OpacityProperty,null);islandPanel.Opacity=1;
-            if(useMotion){var fade=new DoubleAnimation(.88,1,TimeSpan.FromMilliseconds(IslandTransitionMilliseconds)){EasingFunction=GlassDesign.Easing};fade.Completed+=(_,_)=>islandVisibility.Complete(ticket);islandPanel.BeginAnimation(OpacityProperty,fade);}
+            if(pillSpringSurface?.RenderTransform is TransformGroup spring&&spring.Children[0] is ScaleTransform scaleTransform&&spring.Children[1] is TranslateTransform positionTransform){scaleTransform.BeginAnimation(ScaleTransform.ScaleXProperty,null);scaleTransform.BeginAnimation(ScaleTransform.ScaleYProperty,null);positionTransform.BeginAnimation(TranslateTransform.YProperty,null);scaleTransform.ScaleX=scaleTransform.ScaleY=1;positionTransform.Y=0;if(useMotion)PillSpringMotion.Animate(scaleTransform,positionTransform,oldWidth/targetWidth,oldHeight/targetHeight,expanded?-4:2,preferences.Value.PillSpringStiffness,()=>islandVisibility.Complete(ticket));}
+            if(useMotion){var fade=new DoubleAnimation(.88,1,TimeSpan.FromMilliseconds(IslandTransitionMilliseconds)){EasingFunction=GlassDesign.Easing};if(pillSpringSurface is null)fade.Completed+=(_,_)=>islandVisibility.Complete(ticket);islandPanel.BeginAnimation(OpacityProperty,fade);}
         }
         PositionIsland(targetWidth);
-        SetNoActivate(!expanded);if(expanded&&IsVisible&&!IsActive)Activate();
+        if(changed){SetNoActivate(!expanded||!activate);if(expanded&&activate&&IsVisible&&!IsActive)Activate();}RefreshPillAudioMeter();
         if(expanded&&IsLoaded&&monitorToolSetup)Dispatcher.BeginInvoke(OfferFirstRunTools);
     }
     private void StartIslandBluetoothMonitor()
@@ -795,13 +800,14 @@ public sealed partial class MainWindow:Window
     }
     private void PositionIsland(double? preferredWidth=null)
     {
-        if(!IsLoaded||!pillModeEnabled)return;var area=DesktopGeometry.WorkArea(this);Left=area.Left+Math.Max(0,(area.Width-(preferredWidth??ActualWidth))/2);Top=Math.Max(0,area.Top);
+        if(!IsLoaded||!pillModeEnabled)return;var display=TargetPillDisplay();if(display is not null&&PillDisplays.Place(this,display,preferredWidth??ActualWidth,preferences.Value.PillPosition))return;var area=DesktopGeometry.WorkArea(this);Left=area.Left+Math.Max(0,(area.Width-(preferredWidth??ActualWidth))/2);Top=area.Top;
     }
     private void UpdateIslandHint()
     {
         if(islandHint is null)return;
         var playing=islandMediaPlaying&&!string.IsNullOrWhiteSpace(islandCurrentMedia);
         if(pillEqualizer is not null)pillEqualizer.Visibility=playing&&!busy?Visibility.Visible:Visibility.Collapsed;
+        if(islandMediaVisualizer is not null)islandMediaVisualizer.Visibility=playing?Visibility.Visible:Visibility.Collapsed;
         islandHint.Text=!busy&&!playing&&islandTimerRunning?FormatIslandTimer():"";
         if(pillBusyIndicator is not null)
         {
@@ -809,19 +815,7 @@ public sealed partial class MainWindow:Window
             var shouldAnimate=busy&&preferences.Value.Animations&&SystemParameters.ClientAreaAnimation;
             if(pillBusyAnimating!=shouldAnimate&&pillBusyIndicator.RenderTransform is RotateTransform rotation){rotation.BeginAnimation(RotateTransform.AngleProperty,shouldAnimate?new DoubleAnimation(0,360,TimeSpan.FromSeconds(.9)){RepeatBehavior=RepeatBehavior.Forever}:null);pillBusyAnimating=shouldAnimate;}
         }
-        if(pillEqualizer is not null)
-        {
-            var shouldAnimate=playing&&preferences.Value.Animations&&SystemParameters.ClientAreaAnimation;
-            if(pillEqualizerAnimating!=shouldAnimate)
-            {
-                var index=0;foreach(var bar in pillEqualizer.Children.OfType<Rectangle>())
-                {
-                    if(bar.RenderTransform is not ScaleTransform scale){scale=new ScaleTransform(1,1);bar.RenderTransform=scale;bar.RenderTransformOrigin=new Point(.5,1);}
-                    scale.BeginAnimation(ScaleTransform.ScaleYProperty,shouldAnimate?new DoubleAnimation(.35,1,TimeSpan.FromMilliseconds(320+index*90)){AutoReverse=true,RepeatBehavior=RepeatBehavior.Forever,BeginTime=TimeSpan.FromMilliseconds(index*80)}:null);index++;
-                }
-                pillEqualizerAnimating=shouldAnimate;
-            }
-        }
+        RefreshPillAudioMeter();
     }
     private void RenderIslandMedia()
     {
@@ -833,6 +827,8 @@ public sealed partial class MainWindow:Window
         if(islandNowTitle is not null)islandNowTitle.Text=hasMedia?IslandMediaTitleOnly(islandCurrentMedia!):L10n.Text("No active media session.");
         if(islandNowArtist is not null)islandNowArtist.Text=hasMedia?islandMediaArtist??"":"";
         if(islandNowArtwork is not null)islandNowArtwork.Source=islandCurrentArtwork;
+        if(pillCompactArtwork is not null)pillCompactArtwork.Source=hasMedia&&islandCurrentArtwork is not null?islandCurrentArtwork:FileGarden.Artwork("NashiMark");
+        foreach(var satellite in pillSatellites.Values)satellite.SetMedia(hasMedia?islandCurrentArtwork:null,islandMediaPlaying);
         if(!hasMedia&&islandNowSeek is not null)islandNowSeek.IsEnabled=false;
     }
     private void RenderIslandDashboard()

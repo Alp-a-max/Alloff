@@ -48,15 +48,15 @@ public sealed partial class MainWindow
         surface.MouseLeave += (_, _) =>
         {
             CancelIslandHover();
-            if (preferences.Value.PillVisibilityMode == "smart") ScheduleIslandCollapse();
+            if (AutoCollapseMode(preferences.Value.PillVisibilityMode)){if(islandExpanded)ScheduleIslandCollapse();else Dispatcher.BeginInvoke(RefreshPillVisibility,DispatcherPriority.Background);}
         };
         surface.LostKeyboardFocus += (_, _) =>
         {
-            if (preferences.Value.PillVisibilityMode == "smart" && !IsPointerOverIsland()) ScheduleIslandCollapse();
+            if (AutoCollapseMode(preferences.Value.PillVisibilityMode) && !IsPointerOverIsland()) ScheduleIslandCollapse();
         };
         surface.LostMouseCapture += (_, _) => Dispatcher.BeginInvoke(() =>
         {
-            if (preferences.Value.PillVisibilityMode == "smart" && !IsPointerOverIsland()) ScheduleIslandCollapse();
+            if (AutoCollapseMode(preferences.Value.PillVisibilityMode) && !IsPointerOverIsland()) ScheduleIslandCollapse();
         }, DispatcherPriority.Input);
         surface.DragEnter += (_, e) =>
         {
@@ -79,14 +79,14 @@ public sealed partial class MainWindow
     {
         if (popup.Child is not FrameworkElement child) return;
         child.MouseEnter += (_, _) => CancelIslandCollapse();
-        child.MouseLeave += (_, _) => { if (preferences.Value.PillVisibilityMode == "smart") ScheduleIslandCollapse(); };
+        child.MouseLeave += (_, _) => { if (AutoCollapseMode(preferences.Value.PillVisibilityMode)) ScheduleIslandCollapse(); };
         child.LostMouseCapture += (_, _) => Dispatcher.BeginInvoke(() =>
         {
-            if (preferences.Value.PillVisibilityMode == "smart" && !IsPointerOverIsland() && !IsPointerOverPopup(popup)) ScheduleIslandCollapse();
+            if (AutoCollapseMode(preferences.Value.PillVisibilityMode) && !IsPointerOverIsland() && !IsPointerOverPopup(popup)) ScheduleIslandCollapse();
         }, DispatcherPriority.Input);
         child.LostKeyboardFocus += (_, _) => Dispatcher.BeginInvoke(() =>
         {
-            if (preferences.Value.PillVisibilityMode == "smart" && !IsPointerOverIsland() && !IsPointerOverPopup(popup)) ScheduleIslandCollapse();
+            if (AutoCollapseMode(preferences.Value.PillVisibilityMode) && !IsPointerOverIsland() && !IsPointerOverPopup(popup)) ScheduleIslandCollapse();
         }, DispatcherPriority.Input);
     }
     private static bool IsPointerOverPopup(Popup? popup) => popup is { IsOpen:true } &&
@@ -102,10 +102,10 @@ public sealed partial class MainWindow
 
     private void ScheduleIslandHover()
     {
-        islandHoverPending = true; islandHoverDeadline = Environment.TickCount64 + IslandHoverIntentMilliseconds;
+        islandHoverPending = true; islandHoverDeadline = Environment.TickCount64 + preferences.Value.PillHoverDelayMs;
         islandHoverTimer ??= new DispatcherTimer(DispatcherPriority.Input);
         islandHoverTimer.Tick -= OpenAfterHover; islandHoverTimer.Tick += OpenAfterHover;
-        islandHoverTimer.Stop(); islandHoverTimer.Interval = TimeSpan.FromMilliseconds(IslandHoverIntentMilliseconds); islandHoverTimer.Start();
+        islandHoverTimer.Stop(); islandHoverTimer.Interval = TimeSpan.FromMilliseconds(preferences.Value.PillHoverDelayMs); islandHoverTimer.Start();
     }
     private void CancelIslandHover() { islandHoverPending = false; islandHoverTimer?.Stop(); }
     private void OpenAfterHover(object? sender, EventArgs e)
@@ -114,16 +114,17 @@ public sealed partial class MainWindow
         var remaining = islandHoverDeadline - Environment.TickCount64;
         if (remaining > 0) { islandHoverTimer!.Interval = TimeSpan.FromMilliseconds(remaining); islandHoverTimer.Start(); return; }
         islandHoverPending = false;
-        if (!islandExpanded && ShouldExpandOnHover(preferences.Value.PillVisibilityMode) && IsPointerOverIsland()) SetIslandExpanded(true);
+        if (!islandExpanded && ShouldExpandOnHover(preferences.Value.PillVisibilityMode) && (IsPointerOverIsland()||pillEdgeHot))
+        {if(pillEdgeHot&&pillEdgeDisplayId is {} displayId)OpenPillOnDisplay(displayId,false);else if(pillAutoHidden)RevealPillAutomatically(true);else SetIslandExpanded(true,activate:false);}
     }
 
     private void ScheduleIslandCollapse(bool afterDrag = false)
     {
         if (!islandExpanded) return;
-        islandCollapsePending = true; islandCollapseAfterDrag = afterDrag; islandCollapseDeadline = Environment.TickCount64 + IslandCollapseDelayMilliseconds;
+        islandCollapsePending = true; islandCollapseAfterDrag = afterDrag; islandCollapseDeadline = Environment.TickCount64 + preferences.Value.PillCollapseDelayMs;
         islandCollapseTimer ??= new DispatcherTimer(DispatcherPriority.Background);
         islandCollapseTimer.Tick -= CollapseIfPointerLeft; islandCollapseTimer.Tick += CollapseIfPointerLeft;
-        islandCollapseTimer.Stop(); islandCollapseTimer.Interval = TimeSpan.FromMilliseconds(IslandCollapseDelayMilliseconds); islandCollapseTimer.Start();
+        islandCollapseTimer.Stop(); islandCollapseTimer.Interval = TimeSpan.FromMilliseconds(preferences.Value.PillCollapseDelayMs); islandCollapseTimer.Start();
     }
     private void CancelIslandCollapse() { islandCollapsePending = false; islandCollapseTimer?.Stop(); }
     private void CollapseIfPointerLeft(object? sender, EventArgs e)
@@ -132,15 +133,16 @@ public sealed partial class MainWindow
         var remaining = islandCollapseDeadline - Environment.TickCount64;
         if (remaining > 0) { islandCollapseTimer!.Interval = TimeSpan.FromMilliseconds(remaining); islandCollapseTimer.Start(); return; }
         islandCollapsePending = false;
-        if (!islandCollapseAfterDrag && preferences.Value.PillVisibilityMode != "smart") return;
+        if (!islandCollapseAfterDrag && !AutoCollapseMode(preferences.Value.PillVisibilityMode)) return;
         if (!ShouldCollapseIsland(IsPointerOverIsland(), islandDragActive,
                 IsPointerOverPopup(islandActionPopup), IsPointerOverPopup(islandMediaPopup),
                 islandPanel?.IsKeyboardFocusWithin == true && Keyboard.FocusedElement is TextBoxBase)) return;
-        SetIslandExpanded(false);
+        SetIslandExpanded(false,activate:false);RefreshPillVisibility();
     }
 
     internal static bool ShouldCollapseIsland(bool pointerOverSurface, bool dragging,
         bool actionPopupHovered, bool mediaPopupHovered, bool editorFocused = false) =>
         !pointerOverSurface && !dragging && !actionPopupHovered && !mediaPopupHovered && !editorFocused;
-    internal static bool ShouldExpandOnHover(string mode) => mode == "smart";
+    internal static bool ShouldExpandOnHover(string mode) => mode is "smart" or "peek" or "fixed" or "always";
+    internal static bool AutoCollapseMode(string mode) => mode is "smart" or "peek" or "fixed" or "always";
 }

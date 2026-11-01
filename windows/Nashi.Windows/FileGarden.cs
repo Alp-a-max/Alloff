@@ -8,6 +8,7 @@ namespace Nashi.Windows;
 // The same composition and exported pear artwork as macOS HomeView.FileGarden.
 internal sealed class FileGarden:Grid
 {
+    private static readonly Dictionary<string,BitmapImage> artworkCache=new(StringComparer.Ordinal);
     private readonly Image mark;
     internal FileGarden()
     {
@@ -17,7 +18,11 @@ internal sealed class FileGarden:Grid
         mark=new Image{Width=65,Height=65,RenderTransform=new TranslateTransform(0,42)};Children.Add(mark);SetSelected(false);
     }
     internal void SetSelected(bool selected)=>mark.Source=Artwork(selected?"NashiMarkHappy":"NashiMark");
-    internal static BitmapImage Artwork(string name)=>new(new Uri("pack://application:,,,/Assets/"+(name is "NashiMark" or "NashiMarkHappy"?"NashiMascot":name)+".png"));
+    internal static BitmapImage Artwork(string name)
+    {
+        var asset=name is "NashiMark" or "NashiMarkHappy"?"NashiMascot":name;
+        lock(artworkCache){if(artworkCache.TryGetValue(asset,out var cached))return cached;var image=new BitmapImage();image.BeginInit();image.CacheOption=BitmapCacheOption.OnLoad;image.UriSource=new Uri("pack://application:,,,/Assets/"+asset+".png");image.EndInit();if(image.CanFreeze)image.Freeze();artworkCache[asset]=image;return image;}
+    }
     private void AddCard(string label,double angle,double x,double y,string color)
     {
         var content=new StackPanel();

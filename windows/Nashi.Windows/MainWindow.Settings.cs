@@ -9,24 +9,40 @@ public sealed partial class MainWindow
         ShowMain();if(paths.Length==0)return;if(busy||!DesktopGeometry.IsInteractive(this)){pendingLaunch=paths;launchTimer??=new(){Interval=TimeSpan.FromMilliseconds(200)};launchTimer.Stop();launchTimer.Tick-=AcceptPending;launchTimer.Tick+=AcceptPending;launchTimer.Start();return;}files.Clear();Add(paths);ShowLibrary(false);
     }
     private void AcceptPending(object? sender,EventArgs e){if(busy||!DesktopGeometry.IsInteractive(this))return;launchTimer?.Stop();if(pendingLaunch is {} paths){pendingLaunch=null;AcceptLaunch(paths);}}
-    private TrayHost? tray;private bool quitting;
+    private TrayHost? tray;private PreferencesFileWatcher? preferencesWatcher;private System.Windows.Threading.DispatcherTimer? deferredModeTimer;private bool quitting;
     private void SetupDesktop()
     {
         globalDrag=new(this,preferences,OnGlobalDrop,OpenCopiedLink);
+        try{preferencesWatcher=new(preferences,Dispatcher,ExternalPreferencesChanged);}catch(Exception error)when(error is IOException or UnauthorizedAccessException or ArgumentException){L10n.SetText(status,"Settings could not be watched for external changes.");}
         try{tray=new(this,ShowMain,TrayMenu);}catch(InvalidOperationException error){L10n.SetText(status,error.Message);}
         Closing+=(_,e)=>{if(!e.Cancel&&tray is not null&&preferences.Value.KeepInTray&&!quitting){e.Cancel=true;Hide();}};
         // Without a tray icon (Explorer not ready at sign-in), a hidden Nashi could not be reached.
-        Closed+=(_,_)=>{launchTimer?.Stop();tray?.Dispose();};if(tray is not null&&Environment.GetCommandLineArgs().Contains("--background")&&!(preferences.Value.PillModeEnabled&&preferences.Value.PillStartupBehavior=="expanded"))Hide();
+        Closed+=(_,_)=>{launchTimer?.Stop();deferredModeTimer?.Stop();preferencesWatcher?.Dispose();tray?.Dispose();};
+        if(tray is not null&&Environment.GetCommandLineArgs().Contains("--background")&&!(preferences.Value.PillModeEnabled&&preferences.Value.PillStartupBehavior=="expanded"))
+        {
+            if(!preferences.Value.PillModeEnabled||preferences.Value.PillVisibilityMode=="shortcut")Hide();
+            else if(preferences.Value.PillVisibilityMode=="peek"){pillAutoHidden=true;Hide();UpdatePillObserverRegions();}
+        }
     }
-    private void ShowMain(){if(preferences.Value.PillModeEnabled){if(!pillModeEnabled){RestartForPillModeChange();return;}islandHiddenByAutomation=false;Show();SetNoActivate(false);Activate();SetIslandExpanded(true);islandStatusTimer?.Start();islandBluetoothPoll?.Start();_ = RefreshIslandMedia();}else{Show();WindowState=WindowState.Normal;Activate();}}
+    private void ExternalPreferencesChanged()
+    {
+        ApplyPreferences();if(appliedPillMode==preferences.Value.PillModeEnabled){deferredModeTimer?.Stop();return;}
+        if(!busy&&DesktopGeometry.IsInteractive(this)){RestartForPillModeChange();return;}
+        deferredModeTimer??=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(500)};deferredModeTimer.Tick-=ApplyDeferredMode;deferredModeTimer.Tick+=ApplyDeferredMode;deferredModeTimer.Start();
+    }
+    private void ApplyDeferredMode(object? sender,EventArgs e)
+    {
+        if(appliedPillMode==preferences.Value.PillModeEnabled){deferredModeTimer?.Stop();return;}if(busy||!DesktopGeometry.IsInteractive(this))return;deferredModeTimer?.Stop();RestartForPillModeChange();
+    }
+    private void ShowMain(){if(preferences.Value.PillModeEnabled){if(!pillModeEnabled){RestartForPillModeChange();return;}islandHiddenByAutomation=false;pillAutoHidden=false;Show();SetNoActivate(false);Activate();SetIslandExpanded(true);ResumeVisiblePolling();SyncPillSatellites();UpdatePillObserverRegions();_ = RefreshIslandMedia();}else{Show();WindowState=WindowState.Normal;Activate();}}
     private System.Windows.Controls.ContextMenu TrayMenu()
     {
         var menu=new System.Windows.Controls.ContextMenu();
         void Item(string text,Action action){var item=new System.Windows.Controls.MenuItem();L10n.Bind(item,System.Windows.Controls.HeaderedItemsControl.HeaderProperty,text);item.Click+=(_,_)=>action();menu.Items.Add(item);}
         Item("Open Nashi",ShowMain);Item("Library",()=>{ShowMain();ShowIslandWorkspace(true);});Item("Download copied link",OpenCopiedLink);Item("Settings",()=>{ShowMain();ShowSettings();});Item(update is null?"Check for updates":"Update to "+update.Version,()=>{ShowMain();_ = CheckUpdatesAsync(true);});menu.Items.Add(new System.Windows.Controls.Separator());Item("Quit Nashi",()=>{if(busy){ShowMain();L10n.SetText(status,"Finish or cancel the current operation before quitting.");return;}quitting=true;Application.Current.Shutdown();});ThemePopupMenu(menu);return menu;
     }
-    private void ApplyPreferences(){L10n.Language=preferences.Value.Language;Feedback.Enabled=preferences.Value.Feedback;WheelPresentation.Preferences=preferences.Value;Theme.Apply(library.Appearance,preferences.Value.PillAccentColor);ReorderIslandDock();UpdateIslandHint();if(appliedPillMode==preferences.Value.PillModeEnabled)ApplyPillModePreference();if(pillModeEnabled&&ReferenceEquals(Content,islandPanel))SetIslandExpanded(islandExpanded,false);}
-    private void ShowSettings(){SetIslandExpanded(true);new SettingsWindow(this,preferences,ApplyPreferences,()=>CheckUpdatesAsync(true),library).ShowDialog();appearance.SelectedItem=char.ToUpper(library.Appearance[0])+library.Appearance[1..];if(appliedPillMode!=preferences.Value.PillModeEnabled)RestartForPillModeChange();}
+    private void ApplyPreferences(){L10n.Language=preferences.Value.Language;Feedback.Enabled=preferences.Value.Feedback;WheelPresentation.Preferences=preferences.Value;Theme.Apply(library.Appearance,preferences.Value.PillAccentColor);ReorderIslandDock();UpdateIslandHint();globalDrag?.RefreshPreferences();if(appliedPillMode==preferences.Value.PillModeEnabled)ApplyPillModePreference();if(pillModeEnabled&&ReferenceEquals(Content,islandPanel))SetIslandExpanded(islandExpanded,false);if(!App.IsSmokeTest)ConfigurePillVisibility();}
+    private void ShowSettings(){SetIslandExpanded(true);new SettingsWindow(this,preferences,ApplyPreferences,()=>CheckUpdatesAsync(true),library).ShowDialog();appearance.SelectedItem=char.ToUpper(library.Appearance[0])+library.Appearance[1..];if(appliedPillMode!=preferences.Value.PillModeEnabled)RestartForPillModeChange();else RefreshPillVisibility();}
     private void RestartForPillModeChange()
     {
         UnregisterPillHotkey();var replacement=new MainWindow(files.ToArray(),library,monitorToolSetup,offerToolSetup:false);Application.Current.MainWindow=replacement;replacement.Show();if(preferences.Value.PillModeEnabled){replacement.islandHiddenByAutomation=false;replacement.Show();replacement.SetIslandExpanded(true,false);}quitting=true;Close();

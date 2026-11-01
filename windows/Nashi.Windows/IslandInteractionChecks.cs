@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Nashi.Core;
 
 namespace Nashi.Windows;
 
@@ -17,6 +18,16 @@ internal static class IslandInteractionChecks
         var reopening=machine.Start(true,true);machine.Complete(closing);check(machine.Phase==IslandVisibilityPhase.Opening,"An old closing completion changed a newer opening transition.");
         machine.Complete(reopening);check(machine.Phase==IslandVisibilityPhase.Expanded,"The latest opening transition did not finish.");
         machine.Start(false,false);check(machine.Phase==IslandVisibilityPhase.Collapsed,"A nonanimated collapse did not finish immediately.");
+        var displays=new[]{new PillDisplay("primary",0,0,1920,1080,96,true),new PillDisplay("other",-2560,0,0,1440,144,false)};
+        check(PillDisplays.Resolve(displays,"specific","missing")?.Id=="primary"&&PillDisplays.Resolve(displays,"specific","other")?.Id=="other","Missing or selected monitor resolution failed.");
+        var location=PillDisplays.Position(displays[1],200,"center");check(location.X==-1430&&location.Y==0,"Negative-monitor or mixed-DPI pill positioning failed.");
+        check(Math.Abs(PillSpringMotion.Response(0,300))<.0001&&Math.Abs(PillSpringMotion.Response(1,300)-1)<.001&&PillSpringMotion.Duration(300).TotalMilliseconds is >=220 and <=450,"The spring did not settle or use the intended duration.");
+        check(PillModeNavigation.Next(["now","tools","download","media","history","search","settings"],"now",1)=="actions"&&PillModeNavigation.Next(["now","tools","download","media","history","search","settings"],"now",-1)=="history","Wheel navigation must follow module order and skip dialogs.");
+        var gesture=new DragGestureState();var settings=new Preferences();gesture.Begin(new DragPoint(10,10));gesture.Move(new DragPoint(15,12));check(!gesture.NeedsModifierCheck&&gesture.TryStart("Shift",settings) is null,"A small mouse movement started the wheel.");
+        gesture.Move(new DragPoint(30,10));check(gesture.NeedsModifierCheck&&gesture.TryStart("",settings) is null,"A drag without a modifier opened the wheel.");
+        var late=gesture.TryStart("Shift",settings);check(late?.Kind=="convert"&&!gesture.NeedsModifierCheck&&gesture.TryStart("Shift",settings) is null,"A late modifier did not start exactly one wheel.");check(gesture.End()&&!gesture.NeedsModifierCheck,"Releasing the drag did not clear its state.");
+        check(GlobalDragInputObserver.CoversMonitor(-1920,0,0,1080,-1920,0,0,1080,0)&&!GlobalDragInputObserver.CoversMonitor(-1920,0,0,1080,-1920,0,0,1080,0x00C00000)&&!GlobalDragInputObserver.CoversMonitor(-1800,0,0,1080,-1920,0,0,1080,0),"Fullscreen classification did not distinguish a borderless monitor from a captioned or smaller window.");
+        check(ReferenceEquals(FileGarden.Artwork("NashiMark"),FileGarden.Artwork("NashiMarkHappy"))&&FileGarden.Artwork("NashiMark").IsFrozen,"The shared compact artwork must be cached and reusable.");
         check(MainWindow.ShouldCollapseIsland(false, false, false, false),
             "The island did not collapse after the pointer left all surfaces.");
         check(!MainWindow.ShouldCollapseIsland(true, false, false, false),
@@ -29,8 +40,8 @@ internal static class IslandInteractionChecks
             "The island collapsed while its media popover was being used.");
         check(!MainWindow.ShouldCollapseIsland(false, false, false, false, editorFocused: true),
             "The island collapsed while a text editor inside it still had keyboard focus.");
-        check(MainWindow.ShouldExpandOnHover("smart")&&!MainWindow.ShouldExpandOnHover("shortcut")&&!MainWindow.ShouldExpandOnHover("always"),
-            "Only the optional Smart visibility mode should expand the pill on hover.");
+        check(MainWindow.ShouldExpandOnHover("smart")&&MainWindow.ShouldExpandOnHover("peek")&&MainWindow.ShouldExpandOnHover("fixed")&&!MainWindow.ShouldExpandOnHover("shortcut"),
+            "Hover expansion must follow the selected visibility mode.");
         var collapsed=PillGeometry.Create(PillGeometry.CollapsedWidth,PillGeometry.CollapsedHeight);
         var expanded=PillGeometry.Create(PillGeometry.ExpandedWidth,PillGeometry.ExpandedHeight);
         check(Math.Abs(collapsed.Bounds.Width-PillGeometry.CollapsedWidth)<.01&&Math.Abs(collapsed.Bounds.Height-PillGeometry.CollapsedHeight)<.01,

@@ -1,7 +1,23 @@
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 namespace Nashi.Windows;
 public partial class App:Application
 {
+    private void GlassButtonDown(object sender,MouseButtonEventArgs e)=>AnimateGlassButton(sender,GlassDesign.PressScale,GlassDesign.PressMotionMs);
+    private void GlassButtonUp(object sender,MouseButtonEventArgs e)=>AnimateGlassButton(sender,1,GlassDesign.ReleaseMotionMs);
+    private void GlassButtonCaptureLost(object sender,MouseEventArgs e)=>AnimateGlassButton(sender,1,GlassDesign.ReleaseMotionMs);
+    private static void AnimateGlassButton(object sender,double target,double milliseconds)
+    {
+        if(sender is not Button button||button.Template is null)return;
+        var root=button.Template.FindName("Chrome",button) as FrameworkElement??button.Template.FindName("Hover",button) as FrameworkElement;
+        if(root is null)return;root.RenderTransformOrigin=new Point(.5,.5);if(root.RenderTransform is not ScaleTransform scale){scale=new ScaleTransform(1,1);root.RenderTransform=scale;}
+        var fromX=scale.ScaleX;var fromY=scale.ScaleY;scale.BeginAnimation(ScaleTransform.ScaleXProperty,null);scale.BeginAnimation(ScaleTransform.ScaleYProperty,null);scale.ScaleX=scale.ScaleY=target;
+        if(!GlassDesign.MotionEnabled)return;var duration=new Duration(TimeSpan.FromMilliseconds(milliseconds));var easing=target==1?new BackEase{EasingMode=EasingMode.EaseOut,Amplitude=.12}:null;
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty,new DoubleAnimation(fromX,target,duration){EasingFunction=easing});scale.BeginAnimation(ScaleTransform.ScaleYProperty,new DoubleAnimation(fromY,target,duration){EasingFunction=easing});
+    }
     private SingleInstance? instance;
     internal static bool IsSmokeTest{get;private set;}
     internal static bool IsPillModeSmoke{get;private set;}

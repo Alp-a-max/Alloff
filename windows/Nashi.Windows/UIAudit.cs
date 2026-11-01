@@ -121,7 +121,8 @@ internal static class UIAudit
             {
                 "Own-window WPF render, not a desktop screenshot or proof of real pointer/keyboard gestures.",
                 "Native title bars, desktop composition, shadows and glass are outside RenderTargetBitmap; wheel uses solid finish.",
-                "Windows shell file associations and read-only launch-at-login status may vary by test machine."
+                "Windows shell file associations and read-only launch-at-login status may vary by test machine.",
+                "Both saved appearance settings intentionally use the monochrome dark palette."
             },
             isolation = new
             {
@@ -208,7 +209,7 @@ internal static class UIAudit
             capture.Checks["loadedAndArranged"] = ready;
             capture.Checks["privateLibrary"] = Path.GetFullPath(library.DirectoryPath).StartsWith(Path.GetFullPath(stateRoot) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
             capture.Checks["language"] = L10n.Language == capture.Language;
-            capture.Checks["appearance"] = Theme.Dark == (capture.Appearance == "dark");
+            capture.Checks["appearance"] = Theme.Dark && new[]{"Paper","Ink","Surface","Inset","Muted","Line","Gold","GlassSelected"}.All(key=>Theme.Brush(key) is SolidColorBrush b&&b.Color.R==b.Color.G&&b.Color.G==b.Color.B);
             AssertActualScene(subject, owner, fixtures, capture);
             if (!ready) capture.Issues.Add("Scene did not reach loaded, arranged and artwork-ready state within 8 seconds.");
             subject.UpdateLayout();

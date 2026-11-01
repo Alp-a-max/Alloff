@@ -7,6 +7,10 @@ public sealed partial class MainWindow
 {
     private readonly TextBlock webSummary=new(){Text="Paste a public media link to begin.",TextWrapping=TextWrapping.Wrap,Margin=new(4,12,4,12)};
     private readonly ComboBox webQuality=new(){ItemsSource=new[]{"Best available","Up to 1080p","Up to 720p"},SelectedIndex=0};
+    private readonly StackPanel webOperationPanel=new(){Visibility=Visibility.Collapsed,Margin=new(0,10,0,0)};
+    private readonly ProgressBar webProgress=new(){Height=4,Minimum=0,Maximum=1};
+    private readonly TextBlock webProgressText=new(){TextWrapping=TextWrapping.Wrap,Margin=new(0,6,0,0)};
+    private CancellationTokenSource? webDownloadCancellation;
     private readonly StackPanel photoChoices=new();private readonly HashSet<int> selectedWebPhotos=[];private CancellationTokenSource? inspection;private string? inspectedLink,webPayloadKind;
     private void BuildWebOptions()
     {
@@ -14,11 +18,12 @@ public sealed partial class MainWindow
         var quality=new StackPanel();quality.Children.Add(Text("Video quality",12,"Muted"));quality.Children.Add(webQuality);webContent.Children.Add(quality);downloadKind.SelectionChanged+=(_,_)=>quality.Visibility=downloadKind.SelectedItem as string=="video"?Visibility.Visible:Visibility.Collapsed;webContent.Children.Add(photoChoices);
         var destination=new DockPanel{Margin=new(0,14,0,4)};var location=Text(preferences.Value.DownloadFolder,12,"Muted");var change=Button("Change…",()=>{var picker=new OpenFolderDialog{Title=L10n.Text("Save downloaded media to…")};if(picker.ShowDialog(webWindow??this)==true){preferences.Save(preferences.Value with{DownloadFolder=picker.FolderName});location.Text=picker.FolderName;}});DockPanel.SetDock(change,Dock.Right);destination.Children.Add(change);destination.Children.Add(location);webContent.Children.Add(Card(destination));
         webContent.Children.Add(Text("Instagram photo posts open a photo selection. Reel links offer video and audio. Public downloadable media only.",11,"Muted"));
+        webOperationPanel.Children.Add(webProgress);webOperationPanel.Children.Add(webProgressText);var cancel=Button("Cancel",()=>webDownloadCancellation?.Cancel());cancel.HorizontalAlignment=HorizontalAlignment.Left;webOperationPanel.Children.Add(cancel);webContent.Children.Add(webOperationPanel);
         link.TextChanged+=(_,_)=>{inspection?.Cancel();inspectedLink=null;photoChoices.Children.Clear();selectedWebPhotos.Clear();var payload=WebMediaPayload.Parse(link.Text);if(payload is not null&&payload.Kind!=webPayloadKind){webPayloadKind=payload.Kind;SetDownloadKind(payload);}L10n.SetText(webSummary,"Choose Find media to inspect this link.");};
     }
     private async Task InspectWebLinkAsync()
     {
-        if(busy)return;inspection?.Cancel();var pending=new CancellationTokenSource();inspection=pending;var input=link.Text;var payload=WebMediaPayload.Parse(input);if(payload is null){webSummary.Text="Paste one complete public media link.";return;}
+        if(busy)return;inspection?.Cancel();var input=link.Text;var payload=WebMediaPayload.Parse(input);if(payload is null){webSummary.Text=IslandText("Paste one complete public media link.","Eksiksiz bir medya bağlantısı yapıştır.");return;}var pending=new CancellationTokenSource();inspection=pending;
         SetDownloadKind(payload,downloadKind.SelectedItem as string);photoChoices.Children.Clear();selectedWebPhotos.Clear();webSummary.Text="Finding the media…";
         try
         {

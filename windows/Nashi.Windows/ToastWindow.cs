@@ -20,11 +20,18 @@ public sealed class ToastWindow:Window
         action.Click+=(_,_)=>{if(!complete){this.cancel?.Invoke();action.IsEnabled=false;}};Update(new(null,"A fresh file is on its way…"));
     }
     public void Update(Nashi.Core.OperationProgress progress){L10n.SetText(label,progress.Label);bar.IsIndeterminate=progress.Fraction is null;if(progress.Fraction is {} fraction)bar.Value=Math.Clamp(fraction,0,1);L10n.SetText(detail,progress.Fraction is {} value?$"{value:P0}":"Working…");}
-    public void Complete(IReadOnlyList<string> outputs)
+    public void Complete(IReadOnlyList<string> outputs,Action? reuse=null)
     {
         complete=true;L10n.SetText(label,outputs.Count==0?"All set. You’re ready to go.":$"Nicely done. {outputs.Count} {(outputs.Count==1?"file is":"files are")} ready.");detail.Text=outputs.Count>0?Path.GetFileName(outputs[0]):"Ready.";bar.Visibility=Visibility.Collapsed;L10n.Bind(action,ContentControl.ContentProperty,"Show in Explorer");action.IsEnabled=true;
         // Replace the cancel handler by disabling its callback after completion.
         action.Click+=(_,_)=>{if(outputs.Count>0&&(File.Exists(outputs[0])||Directory.Exists(outputs[0])))MainWindow.Reveal(outputs[0]);};
-        var timer=new DispatcherTimer{Interval=TimeSpan.FromSeconds(3)};timer.Tick+=(_,_)=>{timer.Stop();if(WheelPresentation.Preferences.Animations&&SystemParameters.ClientAreaAnimation){var fade=new DoubleAnimation(0,TimeSpan.FromMilliseconds(280));fade.Completed+=(_,_)=>Close();BeginAnimation(OpacityProperty,fade);}else Close();};timer.Start();
+        if(Content is Border {Child:Grid grid})
+        {
+            var commands=new StackPanel{Margin=new(16,4,0,0)};Grid.SetColumn(commands,1);grid.Children.Remove(action);commands.Children.Add(action);
+            if(outputs.Count>0){var open=MainWindow.Button(L10n.Language=="tr"?"Aç":"Open",()=>{if(File.Exists(outputs[0])||Directory.Exists(outputs[0]))System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(outputs[0]){UseShellExecute=true})?.Dispose();});commands.Children.Add(open);}
+            if(reuse is not null)commands.Children.Add(MainWindow.Button(L10n.Language=="tr"?"Yeni işlemde kullan":"Use in another tool",()=>{reuse();Close();}));
+            commands.Children.Add(MainWindow.Button("Close",Close));grid.Children.Add(commands);
+        }
+        // Keep completion actions available until dismissed; a three-second toast was easy to miss.
     }
 }

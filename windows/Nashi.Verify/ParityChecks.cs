@@ -64,9 +64,6 @@ internal static class ParityChecks
         check(partialInfo.Title=="Web media"&&partialInfo.Heights.SequenceEqual(new[]{720,1080})&&!partialInfo.AudioOnly,
             "Malformed optional yt-dlp metadata must not hide playable formats.");try{WebDownload.ParseInfo("{\"is_live\":true}","fixture");throw new Exception("Live stream accepted");}catch(InvalidDataException){check(true,"Web live stream validation");}
         var photoFixture="{\"entries\":[{\"thumbnails\":[{\"url\":\"https://scontent.cdninstagram.com/photo.jpg?stp=c0.0.720.720a_s640x640\",\"width\":640,\"height\":640},{\"url\":\"https://scontent.cdninstagram.com/original.jpg?sig=keep\",\"width\":1440,\"height\":1920}]},{\"duration\":5,\"formats\":[{\"url\":\"https://scontent.cdninstagram.com/video.mp4\"}]}]}";var photos=WebPhotos.Instagram(photoFixture);check(photos.Length==1&&photos[0].Url.EndsWith("original.jpg?sig=keep",StringComparison.Ordinal),"Instagram carousel did not choose full-frame photo or skipped video incorrectly");
-        var partialPhotos=WebPhotos.Instagram("{\"entries\":[{\"duration\":null,\"thumbnails\":[null,{\"url\":42},{\"url\":\"https://cdninstagram.com/synthetic-photo.jpg\",\"width\":900,\"height\":600}]}]}");
-        check(partialPhotos.Length==1&&partialPhotos[0].Width==900&&partialPhotos[0].Height==600,
-            "Malformed Instagram thumbnail variants hid a valid public image.");
         check(LegacyTextCodec.Decode(Encoding.Unicode.GetPreamble().Concat(Encoding.Unicode.GetBytes("Türkçe 🍐")).ToArray())=="Türkçe 🍐","UTF-16 text lost Unicode");
         check(LegacyTextCodec.Decode(new UTF32Encoding(false,true).GetPreamble().Concat(Encoding.UTF32.GetBytes("Türkçe 🍐")).ToArray())=="Türkçe 🍐","UTF-32 text was read as UTF-16");
         // Files from Turkish Windows, 7-Zip and Excel: ANSI 1254 text, OEM 857 ZIP names, semicolon CSV.

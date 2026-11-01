@@ -9,6 +9,9 @@ public static class FeatureCatalog
     private static Contract Load(){using var stream=typeof(FeatureCatalog).Assembly.GetManifestResourceStream("Nashi.FeatureCatalog.json")!;return JsonSerializer.Deserialize<Contract>(stream,new JsonSerializerOptions{PropertyNameCaseInsensitive=true})!;}
     public static IReadOnlyDictionary<string,string[]> Conversions=>Data.ConversionMatrix;
     public static IReadOnlyDictionary<string,string> ToolNames=>Data.ToolNames;
+    public static string[] InputsForTool(string tool)=>Data.SingleTools.Concat(Data.MultipleTools)
+        .Where(pair=>pair.Value.Contains(tool)||(tool=="readQRCode"&&(IsImage("file."+pair.Key)||pair.Key=="pdf")))
+        .Select(pair=>pair.Key).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToArray();
     public static string Extension(string path)=>Path.GetExtension(path).TrimStart('.').ToLowerInvariant() switch{"jpeg"=>"jpg","tif"=>"tiff","heif"=>"heic","aif"=>"aiff","markdown"=>"md","htm"=>"html","gzip" or "tgz"=>"gz",var ext=>ext};
     public static bool IsImage(string path)=>new[]{"jpg","png","webp","heic","tiff","svg","avif","bmp"}.Contains(Extension(path));
     public static bool IsVideo(string path)=>new[]{"mp4","mov","mkv","webm","avi","wmv","m4v","gif"}.Contains(Extension(path));
